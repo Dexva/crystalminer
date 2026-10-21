@@ -193,4 +193,25 @@ T.run("describe lists operations by kind", function()
 		"Operations: 1 identity, 1 two-fold rotation, 1 mirror reflection, 1 inversion.")
 end)
 
+T.run("the corner check finds every misfit the full check finds", function()
+	-- Compare with checking every node, for boxes that fit and boxes that do not.
+	local function full_ok(spec)
+		local ok, r = pcall(S.region, spec)
+		if not ok then return false end
+		for x = 0, r.size[1] - 1 do for y = 0, r.size[2] - 1 do for z = 0, r.size[3] - 1 do
+			for _, im in ipairs(S.images(r, r.min[1] + x, r.min[2] + y, r.min[3] + z)) do
+				if not S.contains_pos(r, im.x, im.y, im.z) then return false end
+			end
+		end end end
+		return true
+	end
+	for _, gens in ipairs({ { "z,x,y" }, { "-y,x,z" }, { "-x,-y,-z" }, S.point_group("m-3m").generators }) do
+		for _, size in ipairs({ { 9, 9, 9 }, { 9, 7, 9 }, { 7, 9, 9 }, { 8, 8, 8 } }) do
+			local spec = { min = { 0, 5, 0 }, size = size, generators = gens }
+			local corner_ok = pcall(S.region, spec)
+			T.eq(corner_ok, full_ok(spec), table.concat(gens, ";") .. " " .. table.concat(size, "x"))
+		end
+	end
+end)
+
 T.finish()

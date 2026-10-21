@@ -49,4 +49,21 @@ T.run("lattice draws cell edges", function()
 	T.ok(#E.dots(r) > 0)
 end)
 
+T.run("axes carry their International Tables symbol: kaleidoscope 2, -3, 4; -4 room -4; -3 room -3", function()
+	local function symbols(gens, size)
+		local r = S.region({ min = { 0, 2, 0 }, size = { 15, 15, 15 }, generators = gens })
+		local s = {}
+		for _, d in ipairs(E.dots(r)) do if d.symbol then s[d.symbol] = true end end
+		return s
+	end
+	local k = symbols(S.point_group("m-3m").generators)
+	-- m-3m: its body diagonals are -3 axes (3-fold rotation plus inversion), its cube axes 4-fold.
+	T.ok(k["2"] and k["-3"] and k["4"] and not k["3"] and not k["-4"], "kaleidoscope")
+	T.ok(symbols({ "y,-x,-z" })["-4"], "-4")
+	local m3 = symbols({ "-z,-x,-y" })
+	T.ok(m3["-3"] and not m3["3"], "-3")
+	local p3 = symbols({ "z,x,y" })
+	T.ok(p3["3"] and not p3["-3"], "plain 3-fold")
+end)
+
 T.finish()

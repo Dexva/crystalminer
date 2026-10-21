@@ -1,2 +1,27 @@
 # Luanti world data if a world is created inside the repo
 worlds/
+# Luanti runtime files
+debug.txt
+*.log
+
+# Data exported by /exportdata (participants' answers; keep them out of the repository)
+crystalminer_*.csv
+
+# Python caches (tools/*.py)
+__pycache__/
+*.py[cod]
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# Scratch output while developing (contact sheets, previews, archives)
+.sheets/
+.preview/
+*.tgz
+*.zip

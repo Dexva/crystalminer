@@ -6,8 +6,9 @@ local content = require("content")
 
 print("content")
 
--- Crystal class (point group of the linear parts) of each space-group region.
-local SPACE_GROUP_CLASS = { P1 = "1", P2_1 = "2", Pa = "m" }
+-- Crystal class (point group of the linear parts) of each space-group and plane-group region.
+-- A floor pattern's mirror lines are vertical mirror planes in 3D, so pmm and pgg have class mm2.
+local SPACE_GROUP_CLASS = { P1 = "1", P2_1 = "2", P4_1 = "4", Pa = "m", pmm = "mm2", pgg = "mm2", p4 = "4", p4g = "4mm" }
 
 local function region(id)
 	return S.region(L.region_spec(L.area(content, id)))
@@ -24,10 +25,18 @@ end)
 
 T.run("group orders stated in quizzes match the engine", function()
 	local orders = { mirror_plaza = 2, twofold_yard = 2, fourfold_tower = 4, twin_mirrors = 4,
-		monoclinic_cube = 4, square_court = 8, orthorhombic_cube = 8, diagonal_cube = 3, kaleidoscope = 48 }
+		monoclinic_cube = 4, square_court = 8, orthorhombic_cube = 8, diagonal_cube = 3, kaleidoscope = 48,
+		bar_three_room = 6 }
 	for id, n in pairs(orders) do T.eq(#region(id).group.ops, n, id) end
 	local hall = L.area(content, "translation_hall")
 	T.eq(#S.images(region("translation_hall"), hall.at[1], hall.at[2], hall.at[3]), 27, "translation hall")
+	-- Floor tilings: copies per cell (the quiz answers) times the number of cells, for a node in
+	-- general position.
+	for id, per_cell in pairs({ mirror_tiles = 4, glide_tiles = 4, pinwheel_tiles = 4, weave_tiles = 8 }) do
+		local a = L.area(content, id)
+		local cells = a.periodic.counts[1] * a.periodic.counts[2] * a.periodic.counts[3]
+		T.eq(#S.images(region(id), a.at[1] + 1, a.at[2], a.at[3] + 2), per_cell * cells, id)
+	end
 end)
 
 T.run("quiz answers point at an option and explain why", function()
@@ -77,6 +86,16 @@ T.run("answering every question walks through the tiers", function()
 		for i, q in ipairs(qs) do T.eq(L.record_correct(content, p, q.id), i == #qs, q.id) end
 	end
 	T.eq(p.tier, L.max_tier(content))
+end)
+
+T.run("gate questions carry their display and a hint into the game", function()
+	local qs = L.questions(content.gate, 0)
+	T.eq(qs[1].display, "A")
+	T.ok(qs[1].hint and #qs[1].hint > 0, "hint")
+	local G = loadfile("mods/crystalminer/gate.lua")(S)
+	local letters = {}
+	for _, d in ipairs(G.displays(content.gate.at)) do letters[d.letter] = true end
+	for _, q in ipairs(qs) do T.ok(not q.display or letters[q.display], q.id) end
 end)
 
 T.run("question ids round-trip", function()

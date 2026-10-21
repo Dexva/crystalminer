@@ -47,7 +47,7 @@ for d in "$TMP/home/.minetest" "$TMP/home/.luanti" \
 	ln -s "$REPO" "$d/games/crystalminer"
 done
 printf 'gameid = crystalminer\nbackend = sqlite3\nplayer_backend = sqlite3\nauth_backend = sqlite3\nmod_storage_backend = sqlite3\n' > "$TMP/world/world.mt"
-printf 'crystalminer.selftest = true\nserver_announce = false\n' > "$TMP/minetest.conf"
+printf 'crystalminer.selftest = true\nserver_announce = false\nmax_forceloaded_blocks = 64\n' > "$TMP/minetest.conf"
 
 # timeout is not installed on macOS by default; use it only if present.
 TIMEOUT=""

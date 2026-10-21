@@ -152,6 +152,99 @@ function S.kind(o)
 	return "?"
 end
 
+--- Order of the linear part: the smallest n with W^n = identity (1, 2, 3, 4 or 6).
+function S.order(o)
+	local p = S.linear(o)
+	for n = 1, 6 do
+		if S.key(p) == S.key(S.IDENTITY) then return n end
+		p = S.compose(S.linear(o), p)
+	end
+	return nil
+end
+
+--- Intrinsic translation (doubled units): the average of t, Wt, ..., W^(n-1)t. It is non-zero
+-- exactly for screw rotations and glide reflections (and pure translations), whatever the origin.
+-- Returned as n times the average, to stay integer, together with n.
+function S.intrinsic(o)
+	local n = S.order(o)
+	local sum, p = { 0, 0, 0 }, S.linear(S.IDENTITY)
+	for _ = 1, n do
+		local v = S.apply_linear(p, o.t)
+		for a = 1, 3 do sum[a] = sum[a] + v[a] end
+		p = S.compose(S.linear(o), p)
+	end
+	return sum, n
+end
+
+--- A small integer direction v with W v = sign v, or nil. For a rotation (sign 1) this is the
+-- axis; for a mirror (sign -1) the plane's normal; for a rotoinversion (sign -1) its axis.
+function S.fixed_direction(o, sign)
+	for a = -1, 1 do
+		for b = -1, 1 do
+			for c = -1, 1 do
+				if a ~= 0 or b ~= 0 or c ~= 0 then
+					local w = S.apply_linear(o, { a, b, c })
+					if w[1] == sign * a and w[2] == sign * b and w[3] == sign * c then return { a, b, c } end
+				end
+			end
+		end
+	end
+	return nil
+end
+
+local AXIS_NAMES = { ["0,1,0"] = "the vertical axis", ["1,0,0"] = "an east-west axis", ["0,0,1"] = "a north-south axis" }
+local PLANE_NAMES = { ["0,1,0"] = "a horizontal plane", ["1,0,0"] = "a vertical plane running north-south",
+	["0,0,1"] = "a vertical plane running east-west" }
+local TURNS = { ["2"] = "a half turn", ["3"] = "a third of a turn", ["4"] = "a quarter turn", ["6"] = "a sixth of a turn" }
+
+local function dir_name(v, names, fallback)
+	local s = 1
+	for _, x in ipairs(v) do
+		if x ~= 0 then s = x > 0 and 1 or -1 break end
+	end
+	-- "x == 0 and 0" turns -0 into 0: Lua 5.1 prints -0 as "-0", LuaJIT as "0".
+	local function z(x) return x == 0 and 0 or x end
+	return names[z(s * v[1]) .. "," .. z(s * v[2]) .. "," .. z(s * v[3])] or fallback
+end
+
+--- Plain-words description of an operation in WORLD axes (x east, y up, z north), as used by
+-- regions. periods: the region's cell in doubled units, or nil for a point group.
+function S.describe_op(o, periods)
+	local k = S.kind(o)
+	local glide = false
+	if periods then
+		local sum, n = S.intrinsic(o)
+		for a = 1, 3 do
+			if (sum[a] / n) % periods[a] ~= 0 then glide = true end
+		end
+	end
+	if k == "1" then return glide and "a translation" or "the block you placed" end
+	if k == "-1" then return "an inversion through the centre" end
+	if k == "m" then
+		local n = S.fixed_direction(o, -1)
+		return (glide and "a glide: a reflection in " or "a reflection in ") .. dir_name(n, PLANE_NAMES, "a diagonal plane")
+			.. (glide and ", then a slide along it" or "")
+	end
+	-- The exact angle, so the 90- and 270-degree turns of a 4-fold axis are told apart. Around the
+	-- vertical axis it is anticlockwise seen from above; S.turn_angle handles the left-handed axes.
+	local FRACTION = { [60] = "a sixth of a turn", [90] = "a quarter turn", [120] = "a third of a turn",
+		[180] = "a half turn", [240] = "two thirds of a turn", [270] = "three quarters of a turn", [300] = "five sixths of a turn" }
+	local function turn_words(lin, v)
+		local deg = S.turn_angle(lin, S.fixed_dir(lin, 1))
+		local vertical = dir_name(v, AXIS_NAMES, "") == "the vertical axis"
+		if deg == 180 then return "a half turn" end
+		return FRACTION[deg] .. " (" .. deg .. " degrees" .. (vertical and ", anticlockwise seen from above" or "") .. ")"
+	end
+	if TURNS[k] then
+		local v = S.fixed_direction(o, 1)
+		return (glide and "a screw: " or "") .. turn_words(S.linear(o), v) .. " about " .. dir_name(v, AXIS_NAMES, "a diagonal axis")
+			.. (glide and ", then a shift along it" or "")
+	end
+	local v = S.fixed_direction(o, -1)
+	local rot = S.compose(S.op({ -1, 0, 0, 0, -1, 0, 0, 0, -1 }), S.linear(o))
+	return turn_words(rot, v) .. " about " .. dir_name(v, AXIS_NAMES, "a diagonal axis") .. ", then an inversion"
+end
+
 ---------------------------------------------------------------------------- groups
 
 S.MAX_ORDER = 192
@@ -309,6 +402,57 @@ function S.identify(g)
 	return nil
 end
 
+---------------------------------------------------------------------------- the 17 plane groups
+
+-- Generators of the 17 plane groups (two-dimensional space groups), standard settings of
+-- International Tables for Crystallography, Vol. A. x and y lie in the floor, z is up and never
+-- changes. Fractions are fractions of the cell. Multiplicity: copies of a general point per cell.
+-- The 5 hexagonal ones are given in a hexagonal basis (a and b at 120 degrees) by their point
+-- operations only; all 5 are symmorphic, so their multiplicity is the order of that point group.
+S.PLANE_GROUPS = {
+	{ "p1", "oblique", {}, 1 },
+	{ "p2", "oblique", { "-x,-y,z" }, 2 },
+	{ "pm", "rectangular", { "-x,y,z" }, 2 },
+	{ "pg", "rectangular", { "-x,y+1/2,z" }, 2 },
+	{ "cm", "rectangular", { "-x,y,z", "x+1/2,y+1/2,z" }, 4 },
+	{ "pmm", "rectangular", { "-x,y,z", "x,-y,z" }, 4 },
+	{ "pmg", "rectangular", { "-x,-y,z", "-x+1/2,y,z" }, 4 },
+	{ "pgg", "rectangular", { "-x,-y,z", "-x+1/2,y+1/2,z" }, 4 },
+	{ "cmm", "rectangular", { "-x,-y,z", "-x,y,z", "x+1/2,y+1/2,z" }, 8 },
+	{ "p4", "square", { "-y,x,z" }, 4 },
+	{ "p4m", "square", { "-y,x,z", "-x,y,z" }, 8 },
+	{ "p4g", "square", { "-y,x,z", "-x+1/2,y+1/2,z" }, 8 },
+	{ "p3", "hexagonal", { "-y,x-y,z" }, 3, true },
+	{ "p3m1", "hexagonal", { "-y,x-y,z", "-y,-x,z" }, 6, true },
+	{ "p31m", "hexagonal", { "-y,x-y,z", "y,x,z" }, 6, true },
+	{ "p6", "hexagonal", { "x-y,x,z" }, 6, true },
+	{ "p6m", "hexagonal", { "x-y,x,z", "-y,-x,z" }, 12, true },
+}
+
+S.plane_catalog = {}
+for _, e in ipairs(S.PLANE_GROUPS) do
+	S.plane_catalog[#S.plane_catalog + 1] = {
+		symbol = e[1], system = e[2], generators = e[3], multiplicity = e[4], hexagonal_basis = e[5] == true,
+	}
+end
+
+--- Group of a plane group on a cell of cx by cy nodes (doubled periods), or of its point
+-- operations alone for the hexagonal ones.
+function S.plane_group(symbol, cx, cy)
+	for _, e in ipairs(S.plane_catalog) do
+		if e.symbol == symbol then
+			local gens = {}
+			if e.hexagonal_basis then
+				for i, j in ipairs(e.generators) do gens[i] = S.parse(j) end
+				return S.group(gens), e
+			end
+			local cell = { 2 * cx, 2 * cy, 2 }
+			for i, j in ipairs(e.generators) do gens[i] = S.parse(j, cell) end
+			return S.group(gens, cell), e
+		end
+	end
+end
+
 ---------------------------------------------------------------------------- regions
 
 -- Crystal axes (x east, y north, z up) to Luanti world axes (X east, Y up, Z north).
@@ -403,10 +547,13 @@ function S.validate(r, anchor)
 			if o.w[5] ~= 1 then error("A floor region needs operations that keep up pointing up") end
 		end
 	end
-	-- Every image of every node must land inside the box, so no copy is ever lost.
-	for x = 0, r.size[1] - 1 do
-		for y = 0, r.size[2] - 1 do
-			for z = 0, r.size[3] - 1 do
+	-- Every image of every node must land inside the box, so no copy is ever lost. The box is
+	-- convex and the operations are affine, so it is enough to check its 8 corner nodes: the image
+	-- of the box is the convex hull of the images of its corners. (Lattice regions wrap.)
+	if r.cell then return end
+	for _, x in ipairs({ 0, r.size[1] - 1 }) do
+		for _, y in ipairs({ 0, r.size[2] - 1 }) do
+			for _, z in ipairs({ 0, r.size[3] - 1 }) do
 				for _, im in ipairs(S.images(r, r.min[1] + x, r.min[2] + y, r.min[3] + z)) do
 					if not S.contains_pos(r, im.x, im.y, im.z) then
 						error("Image falls outside the region (the box must match the symmetry, e.g. a cube for 3-fold axes)")
@@ -474,6 +621,65 @@ function S.describe(g)
 		if c then parts[#parts + 1] = c .. " " .. (c == 1 and n[2] or n[3]) end
 	end
 	return "Operations: " .. table.concat(parts, ", ") .. "."
+end
+
+---------------------------------------------------------------------------- words and pictures
+
+--- Smallest integer direction v (|components| <= 1) with W v = sign * v, normalised so its first
+-- non-zero component is positive; nil if there is none.
+local function fixed_dir(o, sign)
+	for a = -1, 1 do
+		for b = -1, 1 do
+			for c = -1, 1 do
+				if a ~= 0 or b ~= 0 or c ~= 0 then
+					local w = S.apply_linear(o, { a, b, c })
+					if w[1] == sign * a and w[2] == sign * b and w[3] == sign * c then
+						local first = (a ~= 0 and a) or (b ~= 0 and b) or c
+						local f = first > 0 and 1 or -1
+						return { f * a, f * b, f * c }
+					end
+				end
+			end
+		end
+	end
+end
+S.fixed_dir = fixed_dir
+
+--- A world direction (X east, Y up, Z north) in words.
+function S.direction_words(v)
+	local n = (v[1] ~= 0 and 1 or 0) + (v[2] ~= 0 and 1 or 0) + (v[3] ~= 0 and 1 or 0)
+	if n == 1 then
+		if v[1] ~= 0 then return "east-west" end
+		if v[2] ~= 0 then return "vertical" end
+		return "north-south"
+	end
+	if n == 3 then return "cube-diagonal" end
+	if v[2] == 0 then return "horizontal diagonal" end
+	return "sloping diagonal"
+end
+
+--- Rotation angle in degrees (0..359) of a proper rotation about axis a, measured anticlockwise
+-- when a points towards the viewer. World coordinates (X east, Y up, Z north) are left-handed, so
+-- the right-handed cross product below gives the opposite sense; it is flipped.
+function S.turn_angle(o, a)
+	local k = S.kind(o)
+	local n = ({ ["1"] = 1, ["2"] = 2, ["3"] = 3, ["4"] = 4, ["6"] = 6 })[k]
+	if n == 1 then return 0 end
+	if n == 2 then return 180 end
+	-- A vector perpendicular to a, its image, and the sense of turning from one to the other.
+	local u = (a[1] == 0 and a[2] == 0) and { 1, 0, 0 } or { -a[2], a[1], 0 }
+	local w = S.apply_linear(o, u)
+	local cross = { u[2] * w[3] - u[3] * w[2], u[3] * w[1] - u[1] * w[3], u[1] * w[2] - u[2] * w[1] }
+	local dot = cross[1] * a[1] + cross[2] * a[2] + cross[3] * a[3]
+	local step = 360 / n
+	return dot < 0 and step or 360 - step
+end
+
+--- Linear parts of a region's group, back in crystal axes (z up), for the stereogram.
+function S.crystal_ops(g)
+	local out = {}
+	for _, o in ipairs(S.linear_parts(g).ops) do out[#out + 1] = S.conjugate(o, S.CRYSTAL_TO_WORLD) end
+	return out
 end
 
 return S

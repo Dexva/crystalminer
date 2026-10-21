@@ -31,7 +31,8 @@ end
 function L.questions(area, tier)
 	local out = {}
 	for i, q in ipairs((area.quiz or {})[tier] or {}) do
-		out[#out + 1] = { id = area.id .. "." .. tier .. "." .. (i - 1), q = q.q, options = q.options, answer = q.answer, why = q.why }
+		out[#out + 1] = { id = area.id .. "." .. tier .. "." .. (i - 1), q = q.q, options = q.options, answer = q.answer,
+			why = q.why, hint = q.hint, display = q.display }
 	end
 	return out
 end
@@ -94,6 +95,32 @@ function L.record_correct(content, progress, id)
 		return true
 	end
 	return false
+end
+
+--- The seed blocks of a region's showcase as { dx, dy, dz, colour }, offsets from the region's
+-- minimum corner. Pixel art rows run top to bottom; "." is empty.
+function L.showcase_blocks(area)
+	local sc = area.showcase
+	if not sc then return {} end
+	local out = {}
+	for _, b in ipairs(sc.blocks or {}) do out[#out + 1] = { b[1], b[2], b[3], b[4] } end
+	for _, art in ipairs(sc.art or {}) do
+		local n = #art.rows
+		for row, line in ipairs(art.rows) do
+			for col = 1, #line do
+				local colour = art.key[line:sub(col, col)]
+				if colour then
+					local u, v = col - 1, n - row
+					if art.plane == "xy" then
+						out[#out + 1] = { art.at[1] + u, art.at[2] + v, art.at[3], colour }
+					else -- "zy"
+						out[#out + 1] = { art.at[1], art.at[2] + v, art.at[3] + u, colour }
+					end
+				end
+			end
+		end
+	end
+	return out
 end
 
 --- The symmetry-engine spec for a region, optionally with different generators (Free Lab).

@@ -5,3 +5,10 @@ crystalminer.anthropic_api_key (Tutor: Anthropic API key) string
 
 # Runs the automated checks in selftest.lua, then shuts the server down. For developers.
 crystalminer.selftest (Run self-test and shut down) bool false
+
+# Offer the short test of 11 questions when a new player joins (and again at the top tier), to
+# measure what the game teaches. Answers are stored without names; /exportdata saves them.
+crystalminer.pretest (Offer the pre- and post-test) bool true
+
+# Keep it daytime, so colours and symbols stay easy to see.
+crystalminer.always_day (Always daytime) bool true
