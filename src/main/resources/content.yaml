@@ -1,0 +1,465 @@
+# crystalminer learning content.
+#
+# Everything players read lives here, so teachers can edit it without touching code.
+# Generators use Jones notation in crystal axes with z pointing up.
+# Positions ("at") are the minimum block corner of a region in Minecraft coordinates.
+#
+# Each region has:
+#   explain: text per tier. A player sees the text for the highest tier they have reached.
+#   quiz:    questions per tier. Reaching tier N+1 needs every tier-N question answered.
+
+tiers:
+  0: Symmetry Gate
+  1: Single operations
+  2: Combining operations
+  3: Three dimensions
+  4: Lattices and space groups
+
+intro:
+  - "Welcome to crystalminer! Crystals are built from patterns that repeat."
+  - "A symmetry operation is a move that leaves an object looking exactly the same."
+  - "There are four basic kinds:"
+  - "  Translation: slide the object along a straight line."
+  - "  Rotation: turn it about an axis by a fraction of a full turn."
+  - "  Reflection: mirror it in a plane, like a mirror image."
+  - "  Inversion: send every point straight through a centre to the opposite side."
+  - "Look at the four displays in front of you. Each shows a shape (left) and what one operation does to it."
+  - "Type /quiz to test yourself. Pass the gate to unlock the first regions."
+
+glossary:
+  - "Symmetry operation: a move that leaves an object indistinguishable from how it started."
+  - "Symmetry element: the point, line or plane an operation acts about (centre, axis, mirror plane)."
+  - "n-fold rotation axis: rotating by 360/n degrees leaves the object unchanged. Written n (2, 3, 4, 6)."
+  - "Mirror plane: written m. It swaps left- and right-handed shapes."
+  - "Inversion centre: written -1 (say 'bar one'). Sends (x, y, z) to (-x, -y, -z)."
+  - "Rotoinversion: a rotation followed by an inversion, written -n (-1, -3, -4, -6). A mirror is the same as -2."
+  - "Point group: the set of all symmetry operations of an object that leave one point fixed."
+  - "Order of a group: how many operations it contains. One block in a general position makes that many copies."
+  - "Hermann-Mauguin symbol: the standard short name of a group, such as 4mm or 2/m. '/' means 'with a mirror perpendicular to'."
+  - "Lattice: an infinite array of points, each with identical surroundings. A crystal is a motif repeated on a lattice."
+  - "Unit cell: the repeating box of a crystal. Copying it along the lattice translations fills space."
+  - "Screw axis: rotate, then translate along the axis. 2_1 means a half turn plus half a cell."
+  - "Glide plane: reflect, then translate parallel to the plane by half a cell."
+  - "Crystallographic restriction: a lattice can only have 1-, 2-, 3-, 4- or 6-fold rotation axes. 5-fold and 7-fold or higher are impossible in a periodic crystal."
+  - "There are exactly 32 crystallographic point groups. 25 of them fit a cubic block grid; the 7 hexagonal ones need a 6-fold or -6 axis, which a square grid does not have."
+  - "Quasicrystals (discovered by Dan Shechtman, Nobel Prize in Chemistry 2011) show 5-fold symmetry in diffraction because they are ordered but not periodic."
+
+gate:
+  id: symmetry_gate
+  name: Symmetry Gate
+  at: [-26, 40, -14]
+  quiz:
+    0:
+      - q: "Display A shows a shape and its copy. Which operation made the copy?"
+        options: [Translation, Rotation, Reflection, Inversion]
+        answer: 2
+        why: "The copy is a mirror image: left and right are swapped, which no rotation can do."
+      - q: "Display B: which operation made the copy?"
+        options: [Translation, Rotation, Reflection, Inversion]
+        answer: 1
+        why: "The copy is the shape turned half a turn (180 degrees) about a vertical axis."
+      - q: "Display C: which operation made the copy?"
+        options: [Translation, Rotation, Reflection, Inversion]
+        answer: 0
+        why: "The copy is the same shape, the same way round, just moved along a line."
+      - q: "Display D: which operation made the copy?"
+        options: [Translation, Rotation, Reflection, Inversion]
+        answer: 3
+        why: "Every block went through the centre point to the opposite side: up became down, east became west, north became south."
+      - q: "Which operation turns a left hand into a right hand?"
+        options: [Translation, Rotation, Reflection]
+        answer: 2
+        why: "Reflection reverses handedness. Translations and rotations never do."
+
+regions:
+  # ---------------- Tier 1: single operations ----------------
+  - id: mirror_plaza
+    name: Mirror Plaza
+    tier: 1
+    symbol: "m"
+    generators: ["-x,y,z"]
+    anchor: floor
+    at: [-90, 40, 30]
+    size: [15, 12, 15]
+    explain:
+      1:
+        - "A mirror plane (m) runs through the middle of this plaza, north to south."
+        - "Everything you build is reflected to the other side."
+        - "Task: build half a butterfly or a letter, and watch the mirror finish it."
+        - "Notice: build a shape that points left, and its image points right. A mirror swaps handedness."
+      3:
+        - "A mirror is the same as a 2-fold rotation followed by an inversion, so it is also written -2."
+        - "That is why m counts as an 'improper' operation: it cannot be done by moving the object in space."
+    quiz:
+      1:
+        - q: "You place one block next to the mirror plane, not on it. How many blocks appear in total, counting yours?"
+          options: ["1", "2", "4"]
+          answer: 1
+          why: "The group m has 2 operations: do nothing, and reflect. So a block off the plane gives 2."
+        - q: "You place a block exactly on the mirror plane. How many blocks appear?"
+          options: ["1", "2"]
+          answer: 0
+          why: "A block on the plane is its own mirror image."
+      3:
+        - q: "A mirror plane is the same as which rotoinversion?"
+          options: ["-1", "-2", "-4"]
+          answer: 1
+          why: "Rotating 180 degrees and then inverting through a point on the axis gives a reflection in the plane perpendicular to that axis: m = -2."
+
+  - id: twofold_yard
+    name: Twofold Yard
+    tier: 1
+    symbol: "2"
+    generators: ["-x,-y,z"]
+    anchor: floor
+    at: [-65, 40, 30]
+    size: [15, 12, 15]
+    explain:
+      1:
+        - "A 2-fold rotation axis stands upright in the middle of this yard."
+        - "Each block is copied half a turn (180 degrees) around it."
+        - "Task: build one blade of a propeller and watch the second appear."
+        - "Notice: a rotation never turns a left hand into a right hand."
+    quiz:
+      1:
+        - q: "How many times must you apply a half turn to get back to where you started?"
+          options: ["1", "2", "4"]
+          answer: 1
+          why: "Two half turns make one full turn. That is why it is called 2-fold."
+
+  - id: fourfold_tower
+    name: Fourfold Tower
+    tier: 1
+    symbol: "4"
+    generators: ["-y,x,z"]
+    anchor: floor
+    at: [-40, 40, 30]
+    size: [15, 12, 15]
+    explain:
+      1:
+        - "A 4-fold rotation axis stands upright in the middle of this tower."
+        - "Each block is copied a quarter turn (90 degrees) at a time around it."
+        - "Task: build a windmill with four blades by building just one."
+        - "An n-fold axis turns by 360/n degrees; doing it n times brings you back to the start."
+    quiz:
+      1:
+        - q: "You place one block away from the axis. How many blocks appear in total, counting yours?"
+          options: ["2", "4", "8"]
+          answer: 1
+          why: "The group 4 has 4 operations: turns of 0, 90, 180 and 270 degrees."
+        - q: "Which rotation is hidden inside a 4-fold axis?"
+          options: ["2-fold", "3-fold", "6-fold"]
+          answer: 0
+          why: "Two quarter turns make a half turn, so every 4-fold axis is also a 2-fold axis."
+
+  - id: inversion_core
+    name: Inversion Core
+    tier: 1
+    symbol: "-1"
+    generators: ["-x,-y,-z"]
+    anchor: centre
+    at: [-15, 41, 30]
+    size: [15, 15, 15]
+    explain:
+      1:
+        - "An inversion centre (-1, say 'bar one') floats in the middle of this cube."
+        - "Each block is sent straight through the centre to the same distance on the other side."
+        - "Fly in (double-tap jump) and build near a corner: the copy appears at the opposite corner, upside down."
+        - "In coordinates: (x, y, z) becomes (-x, -y, -z)."
+    quiz:
+      1:
+        - q: "A block sits 3 blocks above and 2 blocks east of the centre. Where is its copy?"
+          options: ["3 above, 2 west", "3 below, 2 west", "3 below, 2 east"]
+          answer: 1
+          why: "Inversion reverses every direction: above becomes below and east becomes west."
+        - q: "Does inversion turn a left hand into a right hand?"
+          options: ["Yes", "No"]
+          answer: 0
+          why: "Yes. Like a mirror, inversion is an improper operation and reverses handedness."
+
+  - id: translation_hall
+    name: Translation Hall
+    tier: 1
+    symbol: "P1"
+    generators: []
+    periodic: {cell: [6, 6, 6], counts: [3, 3, 3]}
+    at: [10, 41, 30]
+    explain:
+      1:
+        - "This hall is a crystal: 27 identical boxes (unit cells) stacked 3 by 3 by 3."
+        - "Build anything in one box and it is copied into every box."
+        - "A crystal is a motif (your build) repeated on a lattice (the grid of boxes)."
+        - "The moves from one box to the next are translations."
+      4:
+        - "The box is the unit cell; its edge lengths are the lattice parameters (here 6 blocks each way)."
+        - "A real crystal repeats its unit cell billions of times in every direction."
+        - "Only lattice translations are imposed here, so the space group is P1."
+    quiz:
+      1:
+        - q: "You place one block. How many blocks appear in the hall?"
+          options: ["1", "6", "27"]
+          answer: 2
+          why: "One copy in each of the 3 x 3 x 3 = 27 unit cells."
+
+  # ---------------- Tier 2: combining operations ----------------
+  - id: twin_mirrors
+    name: Twin Mirrors
+    tier: 2
+    symbol: "mm2"
+    generators: ["x,-y,z", "-x,y,z"]
+    anchor: floor
+    at: [-90, 40, 70]
+    size: [15, 12, 15]
+    explain:
+      2:
+        - "Two mirror planes meet at right angles along the vertical line in the middle."
+        - "Build one block and look closely: there are four copies, but only two mirrors."
+        - "Two mirrors at an angle make a rotation by twice that angle. 2 x 90 = 180 degrees, so a 2-fold axis appears where they meet."
+        - "The name mm2 lists the two mirrors and the 2-fold axis they create."
+    quiz:
+      2:
+        - q: "How many copies does one block off the mirrors make, counting yours?"
+          options: ["2", "3", "4"]
+          answer: 2
+          why: "mm2 has 4 operations: nothing, mirror 1, mirror 2, and the 2-fold rotation."
+        - q: "Two mirror planes meet at 45 degrees. What rotation do they create?"
+          options: ["2-fold (180 deg)", "4-fold (90 deg)", "8-fold (45 deg)"]
+          answer: 1
+          why: "Twice the angle: 2 x 45 = 90 degrees, a 4-fold rotation."
+
+  - id: monoclinic_cube
+    name: Monoclinic Cube
+    tier: 2
+    symbol: "2/m"
+    generators: ["-x,-y,z", "x,y,-z"]
+    anchor: centre
+    at: [-65, 41, 70]
+    size: [15, 15, 15]
+    explain:
+      2:
+        - "A vertical 2-fold axis, plus a horizontal mirror plane perpendicular to it."
+        - "'/' in the name means 'with a mirror perpendicular to', so 2/m reads 'two over m'."
+        - "Combine the two and a third operation appears for free: an inversion centre where axis and mirror meet."
+        - "Task: build near a top corner and find the copy at the opposite bottom corner."
+    quiz:
+      2:
+        - q: "Which extra operation do a 2-fold axis and a perpendicular mirror create together?"
+          options: ["A 4-fold axis", "An inversion centre", "A second mirror"]
+          answer: 1
+          why: "Half turn about z: (x,y,z) -> (-x,-y,z). Then mirror: z -> -z. Together: (-x,-y,-z), an inversion."
+        - q: "How many operations does 2/m have?"
+          options: ["2", "3", "4"]
+          answer: 2
+          why: "Identity, the 2-fold rotation, the mirror, and the inversion."
+
+  - id: square_court
+    name: Square Court
+    tier: 2
+    symbol: "4mm"
+    generators: ["-y,x,z", "x,-y,z"]
+    anchor: floor
+    at: [-40, 40, 70]
+    size: [15, 12, 15]
+    explain:
+      2:
+        - "A 4-fold axis with mirror planes: two along the sides and two along the diagonals."
+        - "You only asked for one mirror; the 4-fold rotation turns it into four."
+        - "This is the symmetry of a square seen from above."
+    quiz:
+      2:
+        - q: "How many copies does one block in a general position make, counting yours?"
+          options: ["4", "8", "16"]
+          answer: 1
+          why: "4mm has 8 operations: 4 rotations and 4 mirrors."
+        - q: "How many mirror planes does 4mm have?"
+          options: ["1", "2", "4"]
+          answer: 2
+          why: "The 4-fold axis copies the mirror every 90 degrees, and each pair of mirrors makes more: 2 side mirrors and 2 diagonal mirrors."
+
+  - id: orthorhombic_cube
+    name: Orthorhombic Cube
+    tier: 2
+    symbol: "mmm"
+    generators: ["-x,y,z", "x,-y,z", "x,y,-z"]
+    anchor: centre
+    at: [-15, 41, 70]
+    size: [15, 15, 15]
+    explain:
+      2:
+        - "Three mirror planes, all at right angles, like the faces of a shoebox."
+        - "Each pair of mirrors makes a 2-fold axis, and all three together make an inversion centre."
+        - "The full name is 2/m 2/m 2/m; mmm is the short form."
+    quiz:
+      2:
+        - q: "How many operations does mmm have?"
+          options: ["3", "6", "8"]
+          answer: 2
+          why: "Identity, 3 mirrors, 3 two-fold rotations and the inversion: 8."
+
+  # ---------------- Tier 3: three dimensions ----------------
+  - id: diagonal_cube
+    name: Diagonal Cube
+    tier: 3
+    symbol: "3"
+    generators: ["z,x,y"]
+    anchor: centre
+    at: [-90, 41, 110]
+    size: [15, 15, 15]
+    explain:
+      3:
+        - "A 3-fold axis runs along the long diagonal of this cube, from one corner to the opposite corner."
+        - "It turns the cube by 120 degrees: east goes to north, north goes to up, and up goes to east."
+        - "In coordinates it just cycles them: (x, y, z) -> (z, x, y)."
+        - "A cube has four such diagonals, which is what makes cubic crystals special."
+    quiz:
+      3:
+        - q: "How many copies does one block off the diagonal make, counting yours?"
+          options: ["3", "4", "6"]
+          answer: 0
+          why: "Turns of 0, 120 and 240 degrees."
+
+  - id: rotoinversion_room
+    name: Rotoinversion Room
+    tier: 3
+    symbol: "-4"
+    generators: ["y,-x,-z"]
+    anchor: centre
+    at: [-65, 41, 110]
+    size: [15, 15, 15]
+    explain:
+      3:
+        - "-4 (say 'bar four'): turn a quarter turn about the vertical axis, then invert through the centre."
+        - "Neither step alone is a symmetry here; only the combination is."
+        - "Doing it twice gives a plain half turn, so -4 contains a 2-fold axis but no 4-fold axis and no inversion centre."
+    quiz:
+      3:
+        - q: "Which of these does the group -4 contain?"
+          options: ["A 4-fold axis", "An inversion centre", "A 2-fold axis"]
+          answer: 2
+          why: "(-4)^2 = a half turn. The 4-fold rotation and the inversion only occur together, never separately."
+
+  - id: kaleidoscope
+    name: Kaleidoscope
+    tier: 3
+    symbol: "m-3m"
+    generators: ["z,x,y", "-y,x,z", "-x,-y,-z"]
+    anchor: centre
+    at: [-40, 41, 110]
+    size: [15, 15, 15]
+    explain:
+      3:
+        - "The full symmetry of a cube: m-3m, the highest point symmetry a crystal can have."
+        - "3 four-fold axes, 4 three-fold axes, 6 two-fold axes, 9 mirrors and an inversion centre."
+        - "Place one block anywhere off the symmetry elements and it becomes 48."
+        - "Metals such as copper, iron and aluminium have this symmetry."
+    quiz:
+      3:
+        - q: "How many operations does m-3m have?"
+          options: ["24", "32", "48"]
+          answer: 2
+          why: "48: the 24 rotations of a cube, and each of those combined with inversion."
+
+  - id: impossible_room
+    name: Impossible Room
+    tier: 3
+    symbol: "1"
+    generators: []
+    anchor: floor
+    at: [-15, 40, 110]
+    size: [15, 12, 15]
+    explain:
+      3:
+        - "This room was meant to have a 6-fold axis. It cannot be built on a block grid."
+        - "Turn a square grid by 60 degrees and the grid points no longer land on grid points."
+        - "Every operation that maps the block grid onto itself just permutes x, y and z and flips signs; none of these is a 6-fold rotation."
+        - "So only 25 of the 32 crystal point groups fit here. The 7 hexagonal ones need a hexagonal lattice, like graphite or snowflakes."
+        - "No lattice at all allows a 5-fold axis: that is the crystallographic restriction."
+    quiz:
+      3:
+        - q: "Which rotation axes can a periodic crystal have?"
+          options: ["1, 2, 3, 4 and 6", "Any n", "1, 2, 3, 4, 5 and 6"]
+          answer: 0
+          why: "Rotations must map lattice points to lattice points. That only allows 1-, 2-, 3-, 4- and 6-fold axes."
+
+  # ---------------- Tier 4: lattices and space groups ----------------
+  - id: screw_hall
+    name: Screw Hall
+    tier: 4
+    symbol: "P2_1"
+    generators: ["-x,-y,z+1/2"]
+    periodic: {cell: [6, 6, 6], counts: [2, 3, 2]}
+    at: [-90, 41, 150]
+    explain:
+      4:
+        - "A 2_1 screw axis: turn half a turn about a vertical axis, then rise by half a unit cell."
+        - "Build a block and follow its copies upward: they spiral like a staircase."
+        - "Screw axes only exist in crystals, because they need the lattice translation."
+    quiz:
+      4:
+        - q: "Apply the 2_1 screw operation twice. What do you get?"
+          options: ["Nothing changes", "A shift of one whole cell upward", "A half turn"]
+          answer: 1
+          why: "Two half turns make a full turn, and two half-cell rises make one full cell: a lattice translation."
+
+  - id: glide_hall
+    name: Glide Hall
+    tier: 4
+    symbol: "Pa"
+    generators: ["x+1/2,-y,z"]
+    periodic: {cell: [6, 6, 6], counts: [3, 1, 3]}
+    at: [-65, 41, 150]
+    explain:
+      4:
+        - "A glide plane: reflect in a vertical plane, then slide half a cell along it."
+        - "Like footprints in snow: left, right, left, right, each one a mirror image moved forward."
+    quiz:
+      4:
+        - q: "A glide reflection is a reflection combined with what?"
+          options: ["A rotation", "A translation parallel to the plane", "An inversion"]
+          answer: 1
+          why: "The slide is half a lattice translation, parallel to the mirror plane."
+
+  - id: mystery_lab
+    name: Mystery Lab
+    tier: 4
+    symbol: "?"
+    hidden: "4/m"
+    generators: ["-y,x,z", "x,y,-z"]
+    anchor: centre
+    at: [-40, 41, 150]
+    size: [15, 15, 15]
+    explain:
+      4:
+        - "This lab has a hidden symmetry. Build, look at the copies, and work out the point group."
+        - "Tip: build near the centre first, then far from it. Look for axes, mirrors and an inversion centre."
+    quiz:
+      4:
+        - q: "What is the point group of the Mystery Lab?"
+          options: ["4mm", "4/m", "-4", "422"]
+          answer: 1
+          why: "A vertical 4-fold axis with a horizontal mirror perpendicular to it: 4/m. It also has an inversion centre."
+        - q: "A build has symmetry mmm. Which operations does it have that a 2/m build lacks?"
+          options: ["Two more mirrors and two more 2-fold axes", "An inversion centre", "A 4-fold axis"]
+          answer: 0
+          why: "2/m has one 2-fold axis, one mirror and an inversion centre. mmm has three of each kind of axis and mirror, plus the inversion centre."
+
+  - id: free_lab
+    name: Free Lab
+    tier: 4
+    symbol: "1"
+    generators: []
+    anchor: centre
+    free: true
+    at: [-15, 41, 150]
+    size: [15, 15, 15]
+    explain:
+      4:
+        - "Your lab. Build anything, then type /whatsymmetry to have the exact point group worked out."
+        - "Type /symmetry followed by a description (for example: a fourfold axis with mirrors) to give the lab that symmetry."
+        - "Try asking for a sixfold axis and see what happens."
+        - "Challenges: type /challenge to get a target symmetry, build it, then check it with /whatsymmetry."
+    challenges:
+      - {target: "2/m", text: "Build something whose symmetry is exactly 2/m, not mmm."}
+      - {target: "4mm", text: "Build something with exactly 4mm symmetry: a 4-fold axis and mirrors, but nothing upside down."}
+      - {target: "-4", text: "Hard: build something with a -4 axis but no 4-fold axis."}
+      - {target: "m-3m", text: "Build something with the full symmetry of a cube."}

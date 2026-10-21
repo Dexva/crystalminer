@@ -30,8 +30,10 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // Lets Minestom's test environment create players outside virtual threads.
+    systemProperty("minestom.inside-test", "true")
 }
 
-tasks.register("printTestClasspath") {
-    doLast { println(sourceSets["test"].runtimeClasspath.asPath) }
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-Xlint:deprecation")
 }

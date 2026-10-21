@@ -27,12 +27,11 @@ server repeats the action at every image r' = W·r + w for each operation
 A block-grid point has to map to a block-grid point. That only works if every
 W is a signed permutation matrix, and those matrices form exactly the cubic
 point group m-3m (order 48). So the realisable crystallographic point groups
-are the subgroups of m-3m: by our count 25 of the 32. The 7 hexagonal groups
-(6, -6, 6/m, 622, 6mm, -62m, 6/mmm) can't be built. For plane groups, 12 of
-the 17 work; the 5 that need a hexagonal lattice don't. **Both counts must be
-checked by enumeration in tests, not taken from memory.** That limitation is
-the crystallographic restriction, and the world teaches it rather than hiding
-it.
+are the subgroups of m-3m: 25 of the 32 (checked in `PointGroupsTest`). The 7
+hexagonal groups (6, -6, 6/m, 622, 6mm, -62m, 6/mmm) can't be built. For plane
+groups we expect 12 of the 17 to work; that count is **not yet checked** and
+plane groups are not implemented. That limitation is the crystallographic
+restriction, and the world teaches it rather than hiding it.
 
 ## Learning progression (tiers)
 
@@ -83,8 +82,8 @@ fails on the grid (crystallographic restriction).
 
 ## Explanations
 
-- Content is data, not code: `regions/<region>.yaml` holds, per tier, a short
-  title, two or three sentences, and the task.
+- Content is data, not code: `src/main/resources/content.yaml` holds, per
+  region and tier, the explanation lines and quiz questions.
 - Delivered in game as a title on entering a region, an action-bar hint, and a
   written book with the full text.
 - All text is written and reviewed by people. The LLM does not write it on the
@@ -92,13 +91,13 @@ fails on the grid (crystallographic restriction).
 
 ## LLM role (it translates and explains; it never decides)
 
-- `?ask <question>`: tutor answers using the region's reviewed text and the
+- `/ask <question>`: tutor answers using the region's reviewed text and the
   player's tier as context. If an answer isn't grounded in that text, it says
   so.
-- `?symmetry <description>` (Tier 2+): turns words into generators. Code
+- `/symmetry <description>` (Free Lab, Tier 4): turns words into generators. Code
   builds the group, checks it is realisable, names it, and applies it. If the
   group can't be built, the request is refused and the LLM explains why.
-- `?whatsymmetry` (Tier 4): code tests all 48 operations against the build to
+- `/whatsymmetry`: code tests all 48 operations against the build to
   find its exact symmetry; the LLM only explains the result.
 - All task checks are done in code.
 
@@ -107,14 +106,21 @@ fails on the grid (crystallographic restriction).
 - Server: Minestom (Apache-2.0, on Maven Central). Players use the official
   Java client at the version that Minestom release supports.
 - Symmetry engine: plain Java with no game dependency, unit-tested.
-- LLM: behind a small interface; which provider is to be decided.
+- LLM: Claude API (`claude-opus-5-5`, low effort, server-side fallbacks).
 
-## Build order
+## Build order and status
 
-1. Symmetry engine + tests (closure, group orders, 25/32 and 12/17
-   enumeration, doubled-coordinate images).
-2. Minestom server with region mirroring: Tier 0 gate and Tier 1 regions.
-3. Tier-aware explanations from data files; tier progression.
-4. Tier 2 regions; `?ask` tutor.
-5. Stretch: Tiers 3–4, `?symmetry`, `?whatsymmetry`, directional blocks
-   (stairs, logs).
+1. Done: symmetry engine + tests (closure, group orders, 25/32,
+   doubled-coordinate images).
+2. Done: Minestom server with region mirroring, Tier 0 gate and Tier 1 regions.
+3. Done: tier-aware explanations from data files; tier progression.
+4. Done: Tier 2 regions; `/ask` tutor.
+5. Done: Tiers 3–4, `/symmetry`, `/whatsymmetry`, directional blocks
+   (facing, axis, half, stair shape, connections).
+
+Next:
+- Run the tutor against the live API and review its answers for accuracy.
+- Save player progress to disk.
+- Restrict `/settier` to teachers.
+- Plane groups as floor tilings (check the 12-of-17 count first).
+- Playtest with students; pre/post quiz to measure learning.
