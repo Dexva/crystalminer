@@ -1,15 +1,65 @@
+<p align="center">
+  <img src="menu/header.png" alt="crystalminer: Symmetry and crystals, block by block. A cube with a dashed mirror line beside the game's name" width="800">
+</p>
+
 # crystalminer
 
 A free, open-source [Luanti](https://www.luanti.org) game for learning symmetry, the foundation
-of crystallography. Built for the Open Scientific Intelligence (OSI) Hackathon 2026.
+of crystallography. Every region of the world has a symmetry group. Whatever a student builds in a
+region is copied by every operation of that group: build half a butterfly in Mirror Plaza and the
+mirror finishes it; place one block in the Kaleidoscope and it becomes 48. Students move up
+through five tiers, from "what is a symmetry operation?" to screw axes, glide planes and
+identifying a hidden point group. An optional tutor powered by Claude answers questions using only
+the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hackathon 2026.
 
-Every region of the world has a symmetry group. Whatever a student builds in a region is copied
-by every operation of that group: build half a butterfly in Mirror Plaza and the mirror finishes
-it; place one block in the Kaleidoscope and it becomes 48. Students move up through five tiers,
-from "what is a symmetry operation?" to screw axes, glide planes and identifying a hidden point
-group. An optional tutor powered by Claude answers questions using only the reviewed lesson text.
+[![tests](https://github.com/vzordillo/crystalminer/actions/workflows/tests.yml/badge.svg)](https://github.com/vzordillo/crystalminer/actions/workflows/tests.yml)
+[![Code licence: LGPL-2.1-or-later](https://img.shields.io/badge/code-LGPL--2.1--or--later-blue.svg)](LICENSE)
+[![Media licence: CC BY-SA 4.0](https://img.shields.io/badge/media-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE.media)
 
-## Playing it (free)
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/mirror_plaza.jpg" alt="Mirror Plaza seen through its entrance arch: a butterfly whose second half was made by the mirror"></td>
+    <td width="50%"><img src="docs/images/kaleidoscope.jpg" alt="The Kaleidoscope world: a 48-fold star built from one seed piece, with symmetry markers and the world's name banner"></td>
+  </tr>
+  <tr>
+    <td>Mirror Plaza: half a butterfly is built, the mirror makes the other half.</td>
+    <td>The Kaleidoscope (m-3m): one piece becomes a 48-fold star.</td>
+  </tr>
+</table>
+
+## Contents
+
+- [Features](#features)
+- [Quick start](#quick-start)
+- [How to play](#how-to-play)
+- [For teachers](#for-teachers)
+- [The optional AI tutor](#the-optional-ai-tutor)
+- [Scientific accuracy](#scientific-accuracy)
+- [Development](#development)
+- [Credits and acknowledgements](#credits-and-acknowledgements)
+- [Licence](#licence)
+- [Known limitations](#known-limitations)
+
+## Features
+
+- **Symmetry you can build with.** 23 worlds, each with its own symmetry group. Every block you
+  place or dig is copied by the group, so the symmetry does the work.
+- **Five tiers**, from the four basic operations to screw axes, glide planes, plane groups and a
+  mystery symmetry to identify. Answering every quiz question of a tier unlocks the next.
+- **A museum to tour**: a foyer, three galleries (the four kinds of symmetry, a history of
+  crystallography, crystal structures one block per atom) and a Portal Hall leading to every world.
+- **Help on screen**: a guide window for each place, a "Next: ..." line, a progress board, a
+  stereogram, and symmetry markers drawn with the symbols of International Tables.
+- **Ways of learning from research**: predict before you see, copies one at a time (`/step`), place
+  the copies by hand (`/byhand`), a clue-crystal hunt and a ten-minute visitor tour.
+- **For classes**: a teacher view, an optional pre- and post-test with anonymous CSV export, and a
+  guide for teachers.
+- **Checked science**: tests check the numbers and statements the game makes against the symmetry
+  engine and International Tables.
+- **Free and complete**: its own blocks, textures, lettering, figures and sounds. The tutor is
+  optional.
+
+## Quick start
 
 1. Download **Luanti** from [luanti.org](https://www.luanti.org/downloads/) (Windows, macOS,
    Linux, Android). It is free and open source.
@@ -19,21 +69,47 @@ group. An optional tutor powered by Claude answers questions using only the revi
 3. Start Luanti, pick **crystalminer** in the row of game icons, create a new world and play.
    For a classroom, tick **Host Server** and have students join your computer's address.
 
-Nothing else is needed: crystalminer is a complete game with its own blocks and textures.
-The main menu shows the game's own icon and header image (`menu/icon.png`, `menu/header.png`,
-drawn by `tools/make_menu.py`).
+Nothing else is needed: crystalminer is a complete game with its own blocks and textures. The
+first start of a new world builds the museum and all 23 worlds, which takes about half a minute.
 
-**For teachers:** `docs/TEACHERS.md` is a guide for running crystalminer in a class: what each
-tier teaches, a 45-minute lesson, the commands you need, hosting, the pre- and post-test, known
-limitations and the sources of the real-world examples.
+## How to play
 
-In game: press **K** to fly, **J** to go fast, and **T** or **/** to open chat for commands.
+### Controls
+
+| Key | Action |
+|---|---|
+| **K** | Fly |
+| **J** | Go fast |
+| **T** or **/** | Open chat to type a command |
+| **I** | Progress board: what is left at your tier, with a button to go to each place |
+| Right-click at nothing | While flying, place a block 3 nodes in front of you (for the floating cubes) |
+| Left-click (punch) | Use a portal, a lever, a clue crystal |
+
 All blocks in your inventory are free and never run out.
 
-## The museum and the worlds
+### The museum
 
 Players start in the foyer of the **Museum of Crystals and Symmetry**, a building with a glass
-roof, doors and signs, meant to be toured and read like a real science museum:
+roof, doors and signs, meant to be toured and read like a real science museum.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/foyer.jpg" alt="The museum foyer: a red carpet leads to the welcome board, with a framed picture of the four kinds of symmetry"></td>
+    <td width="50%"><img src="docs/images/gallery1.jpg" alt="Gallery 1: the Symmetry Gate displays, each with a plaque"></td>
+  </tr>
+  <tr>
+    <td>The foyer and its welcome board.</td>
+    <td>Gallery 1: the four displays of the Symmetry Gate.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/gallery3.jpg" alt="Gallery 3: crystal-structure models built one block per atom"></td>
+    <td><img src="docs/images/portal_hall.jpg" alt="The Portal Hall: framed portals to the worlds, each with a plaque"></td>
+  </tr>
+  <tr>
+    <td>Gallery 3: crystal structures, one block per atom.</td>
+    <td>The Portal Hall: one portal per world.</td>
+  </tr>
+</table>
 
 - **Foyer**: a welcome board with a plan of the building; the **Workshop** (the Try-it Pad) to the
   west and **Visitor information** with a "words to know" board to the east.
@@ -41,43 +117,30 @@ roof, doors and signs, meant to be toured and read like a real science museum:
   plaque, and an introduction board.
 - **Gallery 2, A history of crystallography**: a timeline of twelve panels from Steno (1669) to the
   International Year of Crystallography (2014), and Haüy's stepped octahedron built from cubes.
-- **Gallery 3, Crystals at the atomic scale**: the six crystal-structure models of the Crystal
-  Museum, each with a panel and a clue crystal.
-- **Portal Hall**: one portal per symmetry region, ordered by tier, each framed with a plaque
-  giving the region's name, symmetry and idea. Punching a portal takes you there.
+- **Gallery 3, Crystals at the atomic scale**: six crystal-structure models (copper, iron, rock
+  salt, caesium chloride, strontium titanate (perovskite) and diamond), each with a panel, a
+  picture of one unit cell and a gold clue crystal that asks a question about it (`/hunt`).
+- **Portal Hall**: one portal per world, ordered by tier, each framed with a plaque giving the
+  world's name, symmetry and idea. Punching a portal takes you there.
 
-Each symmetry region is a **world of its own**, after MolCraft: an island far from the museum with
-a landscape, an arrival plaza with two information boards (what the region teaches; what to do
-there), an entrance arch with the region's name, and a portal back to the Portal Hall. The build
-spaces are larger than in earlier versions (for example 25 × 16 × 25 for the floors and
-21 × 21 × 21 for the cubes) so the copies have room to be seen.
+Each history panel has a diagram of its idea (simplified ones are labelled "schematic"). There are
+no portraits: the game only draws what can be drawn from the science. The rooms have carpets,
+benches, plants, an information desk, mineral sculptures (fluorite, pyrite, halite) and two
+symmetry puzzles in Gallery 1.
 
-**Guides for first-time players.** The first time a player arrives anywhere (Gallery 1, the
-Try-it Pad, each world), a window explains the place in plain words: what it is, numbered steps
-of what to do, what they will see, and the word for it, with a picture. `/explain` shows it again,
-and the same steps are on the boards on site. At the start only one window is open at a time:
-the pre-test comes first (if it is due), and guides wait until it is finished. Most guides (22 of
-25: not the Gate, the Try-it Pad or the Mystery Lab) end with a line "In the real world: ..."
-that links the place's symmetry to a molecule or mineral; the board in each of those worlds shows
-it too, and `docs/TEACHERS.md` lists the sources. Every number a guide states (how many copies one
-block makes) is checked against the engine by the tests, and the pictures are drawn from data the
-engine computes (`tools/figure_data.lua`, `tools/make_figures.py`).
+### The worlds
 
-**Pictures and furnishings.** Each exhibit in Gallery 3 has a picture of one unit cell beside its
-panel, and each history panel a diagram of its idea (Steno's constant angles, Haüy's stacked
-cubes, the 32 crystal classes, cubic lattices, Bragg's law, a computed ten-fold diffraction
-pattern and more; simplified ones are labelled "schematic"). There are no portraits: the game
-only draws what can be drawn from the science, and adding public-domain portraits is left to
-whoever installs it. The rooms have carpets, benches, plants, an information desk with a plan of
-the building, mineral sculptures (fluorite, pyrite, halite) and two symmetry puzzles in Gallery 1
-whose symmetry (4 and -1) the tests check.
+Each symmetry region is a **world of its own**: an island far from the museum with a landscape, an
+arrival plaza with two information boards (what the world teaches; what to do there), an entrance
+arch with its name and a portal back to the Portal Hall. Build spaces are large (for example
+25 × 16 × 25 for the floors and 21 × 21 × 21 for the cubes) so the copies have room to be seen.
+Each world is built to look like its name: a paved plaza, a fenced yard, a tower with a crown,
+colonnaded halls, display-case cubes, brick rooms and hedged gardens. The architecture always stays
+outside the build space.
 
-Signs are drawn with real lettering: textures assembled from glyphs of DejaVu Sans Mono
-(Bitstream Vera licence, free to redistribute), rendered by `tools/make_glyphs.py`.
+### Tiers
 
-## How the game works
-
-| Tier | Regions | Idea |
+| Tier | Worlds | Idea |
 |---|---|---|
 | 0 | Symmetry Gate, Try-it Pad | The four basic operations: translation, rotation, reflection, inversion; predicting handedness |
 | 1 | Mirror Plaza (m), Twofold Yard (2), Fourfold Tower (4), Inversion Core (-1), Translation Hall (P1) | One operation at a time |
@@ -85,164 +148,270 @@ Signs are drawn with real lettering: textures assembled from glyphs of DejaVu Sa
 | 3 | Diagonal Cube (3), Rotoinversion Room (-4), Bar-Three Room (-3), Kaleidoscope (m-3m), Impossible Room | 3D, cubic symmetry, the crystallographic restriction |
 | 4 | Screw Hall (P2₁), Spiral Tower (P4₁), Glide Hall (Pa), Mystery Lab, Free Lab; Pattern Garden: Mirror Tiles (pmm), Glide Tiles (pgg), Pinwheel Tiles (p4), Weave Tiles (p4g) | Space-group operations, plane groups, identifying symmetry |
 
-- Each region is built to look like its name: a paved plaza, a fenced yard, a tower with a crown,
-  colonnaded halls with glass roofs, display-case cubes, brick rooms and hedged gardens. The
-  architecture always stays outside the build space, so it never interferes with the copies.
-- At the **Try-it Pad** next to the Gate, students build any shape, punch a lever (T, R, M, I),
-  predict whether the result can be moved to match their shape, and then see it. The answer is
-  computed from the shape: a mirror image matches only if the shape has a mirror plane or
-  inversion centre of its own.
-- Entering a region shows its explanation for the player's tier; coming back at a higher tier
-  shows more.
-- Particles mark the symmetry elements with the symbols of International Tables, so they do not
-  rely on colour alone: 2-fold axes as lenses (yellow), 3-fold as triangles (green; with a ring
-  for -3), 4-fold as squares (red), -4 as a square with a lens (purple), mirror planes as sheets
-  of light blue dots, inversion centres as a white disc. Lattice regions show the unit cells in
-  orange and a floor whose tint alternates cell by cell. `/elements` shows one kind at a time.
-- A **stereogram** in the corner shows the region's point group as International Tables draws it:
-  copies of one direction as dots (above) and rings (below), axis symbols and mirror lines.
-- The quiz window sits at the bottom of the screen so the scene stays visible; questions about a
-  Gate display turn the player towards it. A wrong option is greyed out and a hint is shown.
-- A line starting "Next: ..." above the hotbar says what to do next, worked out from the player's
-  tier and answered questions. `/hint off` hides it and `/hint on` shows it again.
-- Press **I** for the progress board: what is left at your tier, with a button to go to each place.
-- To build inside the floating cubes, fly (K) and right-click while pointing at nothing: the block
-  goes 3 nodes in front of you.
-- Short sound effects, made by `tools/make_sounds.py` and stored in `mods/crystalminer/sounds/`,
-  play when a copy is made, for right and wrong answers, at doors and when travelling through a
-  portal. The setting `crystalminer.sounds` turns them off.
-- It stays daytime (setting `crystalminer.always_day`), so colours and symbols stay readable.
-- Answering every quiz question of a tier unlocks the next. Regions above a player's tier can be
-  visited but not built in. Progress is saved with the world.
+Answering every quiz question of a tier unlocks the next. Worlds above a player's tier can be
+visited but not built in. Progress is saved with the world. Entering a world shows its explanation
+for the player's tier; coming back at a higher tier shows more.
 
-Commands: `/guide`, `/quiz`, `/explain`, `/regions`, `/goto <region>`, `/progress`,
-`/elements <all|axes|mirrors|centres|cells|none>`, `/stereogram on|off`, `/step`, `/byhand`,
-`/predict`, `/tour`, `/hunt`, `/hint [on|off]`, `/pretest`, `/posttest`, `/ask <question>`, `/whatsymmetry`,
-`/symmetry <description or symbol>`, `/challenge`, `/clearlab`, `/spawn`. Teachers (the `teacher`
-privilege; grant it with `/grant <name> teacher`) can use `/settier <tier> [player]`, `/class`,
-which shows every student's tier, scores and predictions, `/exportdata` and
-`/showcase [region | clear]`.
+At the **Try-it Pad**, students build any shape, punch a lever (T, R, M, I), predict whether the
+result can be moved to match their shape, and then see it. The answer is computed from the shape:
+a mirror image matches only if the shape has a mirror plane or inversion centre of its own.
 
-**For a demonstration:** `/showcase` fills 20 regions with example builds: a butterfly in Mirror
-Plaza, a windmill in the Fourfold Tower, a 48-fold star in the Kaleidoscope, a spiral staircase in
-the Screw Hall, tiled floors in the Pattern Garden and more. Only one seed piece is placed in each;
-the region's symmetry makes every copy, so what visitors see is the engine at work. The tests
-check that each finished build has exactly its region's symmetry. `/showcase clear` empties those
-regions again (including anything built there since).
+### Help on screen
 
-## Learning and teaching
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/guide_window.jpg" alt="The Fourfold Tower guide window: a picture, numbered steps and an 'In the real world' line"></td>
+    <td width="50%"><img src="docs/images/hud_fourfold_tower.jpg" alt="The Fourfold Tower with a four-bladed windmill and the stereogram of point group 4 in the corner of the screen"></td>
+  </tr>
+  <tr>
+    <td>A guide window: what to do, in numbered steps.</td>
+    <td>The Fourfold Tower, with the stereogram in the corner.</td>
+  </tr>
+</table>
+
+- **Guides.** The first time a player arrives anywhere (Gallery 1, the Try-it Pad, each world), a
+  window explains the place in plain words: what it is, numbered steps, what they will see and the
+  word for it, with a picture. `/explain` shows it again, and the same steps are on the boards on
+  site. Most guides (22 of 25: not the Gate, the Try-it Pad or the Mystery Lab) end with "In the
+  real world: ...", linking the symmetry to a molecule, a mineral or a pattern; the sources are in
+  [docs/TEACHERS.md](docs/TEACHERS.md). At the start only one window is open at a time: the
+  pre-test comes first (if it is due), and guides wait until it is finished.
+- **Symmetry markers.** Particles mark the symmetry elements with the symbols of International
+  Tables, so they do not rely on colour alone: 2-fold axes as lenses (yellow), 3-fold as triangles
+  (green; with a ring for -3), 4-fold as squares (red), -4 as a square with a lens (purple), mirror
+  planes as sheets of light blue dots, inversion centres as a white disc. Lattice worlds show the
+  unit cells in orange and a floor whose tint alternates cell by cell.
+- **Stereogram.** A stereogram in the corner shows the world's point group as International Tables
+  draws it: copies of one direction as dots (above) and rings (below), axis symbols and mirror lines.
+- **Quiz window.** It sits at the bottom of the screen so the scene stays visible; questions about
+  a Gate display turn the player towards it. A wrong option is greyed out and a hint is shown.
+- **"Next: ..."** above the hotbar says what to do next, worked out from the player's tier and
+  answered questions.
+- **Sounds** play when a copy is made, for right and wrong answers, at doors and at portals. It
+  stays daytime, so colours and symbols stay readable. Both can be turned off in the settings
+  (`crystalminer.sounds`, `crystalminer.always_day`).
+
+### Ways of learning
 
 These follow what research says helps students with symmetry and crystallography: predicting
-before seeing, doing the operations by hand rather than watching them, and moving between 3D
-models and the 2D diagrams of textbooks. Screw axes and glide planes, which students find hardest
-(Graw & Stalke, *J. Appl. Cryst.* 55, 144–148, 2022), get the most help.
+before seeing, doing the operations by hand rather than watching them, and moving between 3D models
+and the 2D diagrams of textbooks. Screw axes and glide planes, which students find hardest (Graw &
+Stalke, *J. Appl. Cryst.* 55, 144–148, 2022), get the most help.
 
-- **Measuring learning.** New players are offered 11 short questions before they start, and the
-  same ones again when they reach the top tier (`/pretest`, `/posttest`; setting
-  `crystalminer.pretest`). Each question has an "I don't know" option. Answers are stored with an
-  anonymous id. `/class` shows teachers each student's scores and the class's mean normalized gain;
-  `/exportdata` saves the answers, predictions and discoveries as CSV files without names. If you
-  publish such data as research, you need your institution's ethics approval and informed consent;
-  the notice in the game is not a substitute.
-- **Predict, then see.** The first block a player places in each region waits for a prediction:
-  how many blocks will there be? The count comes from the engine for that exact spot, so a block on
-  a symmetry element (fewer copies) is explained correctly. Teachers see the predictions.
-- **Slow motion and by hand.** `/step` makes copies appear one at a time, each named ("three
-  quarters of a turn (270 degrees, anticlockwise seen from above) about the vertical axis", "a
-  screw: ..."). `/byhand` turns the copying off: the student places every copy and each one is
+- **Predict, then see.** The first block a player places in each world waits for a prediction: how
+  many blocks will there be? The count comes from the engine for that exact spot, so a block on a
+  symmetry element (fewer copies) is explained correctly. Teachers see the predictions.
+- **Slow motion.** `/step` makes copies appear one at a time, each named ("three quarters of a turn
+  (270 degrees, anticlockwise seen from above) about the vertical axis", "a screw: ...").
+- **By hand.** `/byhand` turns the copying off: the student places every copy and each one is
   checked; `/byhand hint` shows one that is missing.
-- **The Crystal Museum.** Copper, iron, rock salt, caesium chloride, strontium titanate
-  (perovskite) and diamond, one block per atom, in a hall to fly around. In front of each, a gold
-  clue crystal asks a question about it (a scavenger hunt; `/hunt`). Since the redesign the
-  models stand in Gallery 3 of the museum, and the Portal Hall leads to every region.
-  These ideas, and the separate world for each region reached through the Portal Hall, come
-  from MolCraft (University of Hull, 2015), a Minecraft world
-  of molecules with a central hall of teleporters, giant models and hidden quiz chests.
-- **The visitor tour.** `/tour` is a ten-minute guided route for open days and museums, with a
-  short panel at each stop; visitors may build at the stops whatever their tier.
+- **Clue crystals.** A scavenger hunt in Gallery 3: punch a gold clue crystal to answer a question
+  about its model.
+- **The visitor tour.** `/tour` is a ten-minute guided route for open days and museums, with a short
+  panel at each stop; visitors may build at the stops whatever their tier.
 
-## The tutor (optional, paid)
+### Commands
 
-The game is complete and free without the tutor. With it, `/ask` answers questions and
-`/symmetry` understands descriptions such as "a fourfold axis with mirrors". It uses the Claude
-API, which is **charged per request** by Anthropic.
+**Everyone**
 
-To turn it on, in Luanti's **Settings** (show advanced settings):
+| Command | What it does |
+|---|---|
+| `/guide` | List what you can do |
+| `/explain` | Show the guide for this place again |
+| `/quiz` | Answer questions to unlock the next tier |
+| `/progress` | Show your tier |
+| `/regions`, `/goto <region>`, `/spawn` | List the worlds, travel to one, go back to the foyer |
+| `/elements <all\|axes\|mirrors\|centres\|cells\|none>` | Choose which symmetry markers to show |
+| `/stereogram on\|off` | Show or hide the stereogram |
+| `/hint [on\|off]` | Show or hide the "Next:" line |
+| `/predict [on\|off]` | Predict again in this world, or turn predictions on or off |
+| `/step [on\|off]` | Copies appear one at a time, each named |
+| `/byhand [hint\|off]` | Place the copies yourself and have each one checked |
+| `/hunt` | Show which clue crystals you have solved |
+| `/tour [next\|back\|end]` | The ten-minute guided tour |
+| `/pretest`, `/posttest` | The short test before and after playing |
+| `/whatsymmetry` | Work out the exact symmetry of your build |
+| `/symmetry <description or symbol>` | Give the Free Lab a symmetry, e.g. `/symmetry 4mm` |
+| `/challenge`, `/clearlab` | A build challenge for the Free Lab; empty the Free Lab |
+| `/ask <question>` | Ask the tutor (optional, see below) |
+
+**Teachers** (the `teacher` privilege; automatic in single player; grant it with
+`/grant <name> teacher`)
+
+| Command | What it does |
+|---|---|
+| `/class` | Every student's tier, scores and predictions |
+| `/settier <tier> [player]` | Set a player's tier |
+| `/exportdata` | Save answers, predictions and discoveries, without names, as CSV files in the world folder |
+| `/showcase [region \| clear]` | Fill the worlds with example builds, or empty them again |
+
+**For a demonstration**, `/showcase` fills 20 worlds with example builds: a butterfly in Mirror
+Plaza, a windmill in the Fourfold Tower, a 48-fold star in the Kaleidoscope, a spiral staircase in
+the Screw Hall, tiled floors in the Pattern Garden and more. Only one seed piece is placed in each;
+the world's symmetry makes every copy, so what visitors see is the engine at work.
+`/showcase clear` empties those worlds again (including anything built there since).
+
+## For teachers
+
+[docs/TEACHERS.md](docs/TEACHERS.md) is a guide for running crystalminer in a class: what each tier
+teaches, a 45-minute lesson, the commands you need, hosting, the pre- and post-test, known
+limitations and the sources of the real-world examples.
+
+**The pre- and post-test.** New players are offered 11 short questions before they start, and the
+same ones again when they reach the top tier (`/pretest`, `/posttest`; setting
+`crystalminer.pretest`). Each question has an "I don't know" option. Answers are stored with an
+anonymous id. `/class` shows each student's scores and the class's mean normalized gain;
+`/exportdata` saves the answers, predictions and discoveries as CSV files without names.
+
+**Ethics.** If you publish such data as research, you need your institution's ethics approval and
+informed consent; the notice in the game is not a substitute.
+
+## The optional AI tutor
+
+The game is complete and free without the tutor. With it, `/ask` answers questions and `/symmetry`
+understands descriptions such as "a fourfold axis with mirrors". It uses the Claude API, which is
+**charged per request** by Anthropic.
+
+**To turn it on**, in Luanti's **Settings** (show advanced settings):
+
 - set **Mods → HTTP mods** (`secure.http_mods`) to `crystalminer`;
-- set **crystalminer → Tutor: Anthropic API key**, or start Luanti with the environment
-  variable `ANTHROPIC_API_KEY`.
+- set **crystalminer → Tutor: Anthropic API key** (`crystalminer.anthropic_api_key`), or start
+  Luanti with the environment variable `ANTHROPIC_API_KEY`.
 
-What Claude does and doesn't do:
-- `/ask`: answers using only the reviewed text in `mods/crystalminer/content.lua`. It is told to
-  say when that text does not cover a question rather than guess, and it is never given the
-  Mystery Lab answer.
+**What Claude does and does not do.** All text players read is written and reviewed by people
+(in `mods/crystalminer/content.lua`); Claude does not write lessons on the fly.
+
+- `/ask`: answers using only the reviewed text in `mods/crystalminer/content.lua`. It is told to say
+  when that text does not cover a question rather than guess, and it is never given the Mystery Lab
+  answer.
 - `/symmetry`: Claude only picks a point-group symbol (structured output). The symmetry engine
   checks it, builds the group and writes every statement about it. A request for a 6-fold axis is
   refused by the engine, with the reason. Typing a symbol directly (`/symmetry 4mm`) works without
   the tutor.
 - `/whatsymmetry` is pure code: it tests all 48 cubic-grid operations against the build.
 
-Model: `claude-opus-5-5` at low effort, with server-side fallbacks in case a safety classifier
+**Model.** `claude-opus-5-5` at low effort, with server-side fallbacks in case a safety classifier
 declines a request. Server-side fallback is a beta feature, so requests carry an `anthropic-beta`
 header for it.
 
-Limits, to keep the cost down: a player must wait 20 seconds between requests; at most 3
-requests wait for the API at once across the server; a question or description may be at most
-300 characters; the answer is capped at 4096 tokens, and an answer cut off at that limit is
-discarded rather than shown half-finished.
+**Limits**, to keep the cost down: a player must wait 20 seconds between requests; at most 3
+requests wait for the API at once across the server; a question or description may be at most 300
+characters; the answer is capped at 4096 tokens, and an answer cut off at that limit is discarded
+rather than shown half-finished.
 
-## Science checks
+**Status.** The tutor has not been run against the live API (no key was available during
+development). Request building and response handling are unit-tested.
+
+## Scientific accuracy
+
+### Why only some symmetries fit
+
+Positions use doubled coordinates (a block's centre is at 2x + 1), so mirror planes and axes can
+pass through a block's centre or between blocks while every operation stays integer-valued. A
+block-grid point must map to a block-grid point. That only works if every operation's matrix is a
+signed permutation matrix, and those matrices form the cubic point group m-3m (order 48). So the
+point groups that can be built are the subgroups of m-3m: 25 of the 32. The 7 hexagonal groups
+cannot. This is the crystallographic restriction, and the game teaches it (in the Impossible Room)
+rather than hiding it. Every region is checked so that no copy ever falls outside its build space;
+lattice regions wrap around, like a crystal.
+
+### What the tests check
 
 The tests check the claims the world makes, rather than relying on memory:
 
 - All 32 crystallographic point groups have the correct orders (International Tables for
   Crystallography, Vol. A).
-- Exactly 25 of them fit a cubic grid. The other 7 (hexagonal) cannot in any orientation: each
-  contains a 6 or -6 operation, no grid operation is one, and determinant and trace (which tell
-  the kinds of operation apart) do not change with orientation.
-- Counting operations by kind tells all 32 groups apart, so `/whatsymmetry` names a group however
-  it is oriented.
-- Every region's stated symmetry, and every quiz answer about group order, matches the engine.
-- Combination rules taught in tier 2 hold: mm2 contains a 2-fold axis, 2/m an inversion centre;
-  -4 contains a 2-fold axis but no 4-fold axis and no inversion centre; -3 contains both a 3-fold
-  axis and an inversion centre.
+- Exactly 25 of them fit a cubic grid. The other 7 cannot in any orientation: each contains a 6 or
+  -6 operation, no grid operation is one, and determinant and trace (which tell the kinds of
+  operation apart) do not change with orientation.
+- Counting operations by kind tells all 32 groups apart, so `/whatsymmetry` names a group however it
+  is oriented.
+- Every world's stated symmetry, and every quiz answer about group order, matches the engine.
+- The combination rules of tier 2 hold: mm2 contains a 2-fold axis, 2/m an inversion centre; -4
+  contains a 2-fold axis but no 4-fold axis and no inversion centre; -3 contains both a 3-fold axis
+  and an inversion centre.
 - Exactly 12 of the 17 plane groups fit the block grid, each with the multiplicity listed in
-  International Tables; the other 5 contain a 3-fold rotation, which no grid operation that keeps
-  up pointing up can be. The statements about the Pattern Garden hold: pgg has glides but no
-  mirrors, p4 has neither, pmm's mirrors cross at 2-fold points, and in p4g no mirror passes
-  through a 4-fold point.
-- Each Gate display can be explained by exactly one operation, the one the quiz says, because
-  the motif has no symmetry of its own.
+  International Tables; the other 5 contain a 3-fold rotation, which no grid operation that keeps up
+  pointing up can be. The Pattern Garden's statements hold: pgg has glides but no mirrors, p4 has
+  neither, pmm's mirrors cross at 2-fold points, and in p4g no mirror passes through a 4-fold point.
+- Each Gate display can be explained by exactly one operation, the one the quiz says, because the
+  motif has no symmetry of its own. The two puzzles in Gallery 1 have the symmetry (4 and -1) they
+  claim.
 - The museum's models are measured, not trusted: every atom inside them has the textbook number of
   nearest neighbours (copper 12, iron 8, rock salt 6, caesium chloride 8, titanium in perovskite 6
   oxygens, diamond 4), every clue answer equals the count measured on its model, the models have
   full cubic symmetry about their centre, and a carbon atom in diamond has the site symmetry -43m.
-- Every stereogram has one dot or ring per operation, for all 25 grid point groups, with the
-  right axis symbols; operations are named with the correct sense of turning (the world's axes are
+- Every stereogram has one dot or ring per operation, for all 25 grid point groups, with the right
+  axis symbols; operations are named with the correct sense of turning (the world's axes are
   left-handed, which the code accounts for).
-- Every example build from `/showcase` has exactly its region's symmetry, and the counts its text
+- Every number a guide states (how many copies one block makes) matches the engine.
+- Every example build from `/showcase` has exactly its world's symmetry, and the counts its text
   gives (48, 8, 6, ...) are right.
 
-## Tests
+### Figures drawn from the science
+
+Pictures in the game are generated by scripts in [tools/](tools), the guide pictures from data the
+symmetry engine computes.
+
+<table>
+  <tr>
+    <td width="33%"><img src="mods/crystalminer/textures/crystalminer_hist_1913.png" alt="Diagram of Bragg's law from the 1913 panel of the history gallery"></td>
+    <td width="33%"><img src="mods/crystalminer/textures/crystalminer_fig_rocksalt.png" alt="Picture of one unit cell of rock salt, shown beside its model in Gallery 3"></td>
+    <td width="33%"><img src="mods/crystalminer/textures/crystalminer_guide_kaleidoscope.png" alt="The Kaleidoscope's guide picture, drawn from the symmetry engine's output"></td>
+  </tr>
+  <tr>
+    <td>1913: Bragg's law (Gallery 2).</td>
+    <td>A unit cell of rock salt (Gallery 3).</td>
+    <td>The Kaleidoscope's guide picture.</td>
+  </tr>
+</table>
+
+## Development
+
+### Requirements
+
+- `luajit` (or `lua5.1`) for the unit tests. The symmetry engine is pure Lua with no Luanti calls.
+- A Luanti server binary (`luantiserver`, or `minetestserver` for older versions) for the
+  in-server self-test.
+- Only to regenerate assets with the scripts in `tools/`: Python 3 with Pillow (figures, glyphs,
+  furniture, menu art; `make_textures.py` needs only the standard library), NumPy and either the
+  `soundfile` module or `ffmpeg` with libvorbis (sounds), and `luajit` for `tools/figure_data.lua`.
+
+### Running the tests
 
 ```bash
-tests/run_all.sh
+tests/run_all.sh [path-to-luanti-binary]
 ```
 
-Needs `luajit` (or `lua5.1`) and a Luanti server binary (`luantiserver`, or `minetestserver` for
-older versions). It runs the unit tests (`test_symmetry`, `test_content`, `test_science`,
-`test_elements`, `test_decor`, `test_showcase`, `test_assess`, `test_museum`, `test_signs`,
-`test_guides`, `test_next_hint`, `test_tutor`; `test_signs` checks that the text of every sign fits
-it and has glyphs, `test_guides` that every guide's numbers match the engine, `test_next_hint`
-the "Next:" line), then
-starts a real server with `crystalminer.selftest = true`, which places and digs blocks through the
-registered callbacks, runs about 82 checks: locking, quizzes, saving, the gate, the Try-it Pad, the floor
-tilings, the architecture, predictions, step mode, the museum and its clues, the teleporters, the
-tour, the data export, the teacher view, the Free Lab, the museum's signs, doors and doorways,
-the Portal Hall and every world's plaza, arch and portal back, the symmetry markers, the order of
-the pre-test and guide windows, and shuts down.
+This runs the unit tests (it skips them if no Lua is installed), then starts a real server with
+`crystalminer.selftest = true`. The unit tests are:
 
-## Project layout
+| File | Checks |
+|---|---|
+| `test_symmetry.lua` | The engine: operations, groups, the point and plane groups |
+| `test_science.lua` | The science statements listed above |
+| `test_content.lua` | Every region's symmetry, quiz answers and group orders; regions do not overlap |
+| `test_elements.lua` | Where symmetry markers are drawn |
+| `test_decor.lua` | Architecture stays out of the build spaces; worlds do not touch |
+| `test_showcase.lua` | The `/showcase` builds have their world's symmetry |
+| `test_assess.lua` | Pre- and post-test items, normalized gain, anonymous export |
+| `test_museum.lua` | The crystal models, clue answers and stereograms |
+| `test_signs.lua` | The text of every sign fits it and has glyphs |
+| `test_guides.lua` | Every guide's numbers match the engine |
+| `test_next_hint.lua` | The "Next:" line |
+| `test_tutor.lua` | Tutor request building and response handling |
+
+The self-test (`mods/crystalminer/selftest.lua`) places and digs blocks through the registered
+callbacks and runs about 82 checks: locking, quizzes, saving, the Gate, the Try-it Pad, the floor
+tilings, the architecture, predictions, step mode, the museum and its clues, the teleporters, the
+tour, the data export, the teacher view, the Free Lab, the museum's signs, doors and doorways, the
+Portal Hall and every world's plaza, arch and portal back, the symmetry markers and the order of the
+pre-test and guide windows. Then it shuts the server down.
+
+GitHub Actions runs the unit tests and the self-test on Ubuntu 22.04 (Minetest 5.4.1) and Ubuntu
+24.04 (Minetest 5.6.1).
+
+### Project layout
 
 ```
 game.conf                     Luanti game definition
@@ -268,42 +437,68 @@ mods/crystalminer/
   tutor.lua                   Claude API requests (raw HTTP)
   content.lua                 all text players read; edit without touching code
   selftest.lua                in-server checks
-  sounds/                     Ogg sound effects, made by tools/make_sounds.py
-  textures/                   generated by tools/make_textures.py, make_glyphs.py, make_figures.py
-                              (with figure_data.lua and history.py) and make_furniture.py
+  settingtypes.txt            the game's settings
+  sounds/                     Ogg sound effects
+  textures/                   generated textures, glyphs and figures
 tests/                        unit tests and test runners
 docs/TEACHERS.md              a guide for teachers
-menu/                         main-menu icon and header image (made by tools/make_menu.py)
-tools/                        generators: make_textures.py, make_glyphs.py, make_figures.py,
-                              make_furniture.py, make_menu.py, make_sounds.py, history.py,
-                              figure_data.lua
+docs/images/                  screenshots for this README
+menu/                         main-menu icon and header image
+tools/                        generators (see below)
 ```
 
-Crystal axes (z up) map to the world as x → east, y → north, z → up.
+### Generated assets
+
+| Script | Makes |
+|---|---|
+| `tools/make_textures.py` | Block textures |
+| `tools/make_glyphs.py` | Sign lettering, from DejaVu Sans Mono |
+| `tools/make_figures.py` (with `figure_data.lua` and `history.py`) | Guide pictures, unit-cell pictures and history diagrams |
+| `tools/make_furniture.py` | Furniture textures |
+| `tools/make_sounds.py` | Sound effects in `mods/crystalminer/sounds/` |
+| `tools/make_menu.py` | `menu/icon.png` and `menu/header.png` |
+
+**Coordinates.** Crystal axes (z up) map to the world as x → east, y → north, z → up.
+
+### Settings
+
+All are in [mods/crystalminer/settingtypes.txt](mods/crystalminer/settingtypes.txt):
+`crystalminer.anthropic_api_key`, `crystalminer.selftest` (default off), `crystalminer.pretest`,
+`crystalminer.always_day` and `crystalminer.sounds` (all three on by default).
+
+## Credits and acknowledgements
+
+- [Luanti](https://www.luanti.org), the free and open-source game engine crystalminer runs on.
+- MolCraft (University of Hull, 2015), a Minecraft world of molecules with a central hall of
+  teleporters, giant models and hidden quiz chests. The Crystal Museum, the clue crystals and the
+  separate world for each region reached through the Portal Hall come from its ideas.
+- Graw & Stalke, *J. Appl. Cryst.* 55, 144–148 (2022), on the topics students find hardest.
+- International Tables for Crystallography, Vol. A, for point-group orders, plane-group
+  multiplicities and symbols.
+- [DejaVu fonts](https://dejavu-fonts.github.io/) for the lettering on signs and in figures.
 
 ## Licence
 
-- Code: GNU LGPL 2.1 or later (see `LICENSE`).
-- Textures, pictures, sounds, menu images and texts: CC BY-SA 4.0 (see `LICENSE.media`).
-- Sign lettering is rendered from DejaVu fonts (see `LICENSE.fonts`).
+- Code: GNU LGPL 2.1 or later ([LICENSE](LICENSE)).
+- Textures, pictures, sounds, menu images and texts: CC BY-SA 4.0 ([LICENSE.media](LICENSE.media)).
+- Sign lettering is rendered from DejaVu fonts ([LICENSE.fonts](LICENSE.fonts)).
 
 Copyright (c) 2026 Viejay Ordillo and contributors.
 
 ## Known limitations
 
-- The self-test passes on a Minetest 5.4.1 server. The game has been played in a Luanti 5.17
-  client on macOS: Gate, quiz, regions, showcase, museum and a clue crystal, the stereogram,
-  predictions, step mode and the tour; after the museum redesign, the foyer, Gallery 1 and its
-  plaques, the doors, the Portal Hall and a world's plaza. It has not yet been played by students,
-  and the learning check has not yet produced data.
+- **Not yet played by students.** The self-test passes on Minetest 5.4.1 and 5.6.1 servers
+  (GitHub Actions). The game has been played in a Luanti 5.17 client on macOS: the Gate, quiz, worlds, showcase, museum
+  and a clue crystal, the stereogram, predictions, step mode and the tour; after the museum
+  redesign, the foyer, Gallery 1 and its plaques, the doors, the Portal Hall and a world's plaza.
+  It has not yet been played by students, and the learning check has not yet produced data. We
+  make no claims about learning outcomes.
 - Symmetry markers are drawn by particle spawners that run on the player's computer. Their
-  particles start at random times, so a marker is blank for a moment now and then (about 0.25 %
-  of the time, by the calculation in `elements.lua`), and a hidden marker disappears within 3
-  seconds.
+  particles start at random times, so a marker is blank for a moment now and then (about 0.25 % of
+  the time, by the calculation in `elements.lua`), and a hidden marker disappears within 3 seconds.
 - The first start of a new world builds the museum and all 23 worlds, which takes about half a
   minute.
-- The tutor has not been run against the live API (no key was available during development).
-  Request building and response handling are unit-tested.
+- The tutor has not been run against the live API.
 - The Free Lab's symmetry is shared by everyone on the server and resets when the server restarts.
   The Try-it Pad is also shared: in a class, students take turns or build in the regions.
 - Worlds made with an earlier version are rebuilt on start. Since the museum redesign the regions

@@ -2,7 +2,7 @@ Media licence: CC BY-SA 4.0
 
 The textures, pictures, figures and all texts that players read in crystalminer (everything in
 mods/crystalminer/textures/, the lesson and sign texts in mods/crystalminer/content.lua and
-mods/crystalminer/guides.lua, README.md and PLAN.md) are licensed under the Creative Commons
+mods/crystalminer/guides.lua, README.md, docs/ and menu/) are licensed under the Creative Commons
 Attribution-ShareAlike 4.0 International licence (CC BY-SA 4.0):
 
     https://creativecommons.org/licenses/by-sa/4.0/
