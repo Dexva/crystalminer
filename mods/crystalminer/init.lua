@@ -14,7 +14,7 @@ local http = core.request_http_api and core.request_http_api()
 
 local storage = core.get_mod_storage()
 -- Raise this when the built world changes; existing worlds are then rebuilt on start.
-local WORLD_VERSION = "13"
+local WORLD_VERSION = "14"
 local GROUND_Y = 0
 local SPAWN = content.lobby.spawn
 local LABEL_RANGE = 30
@@ -339,7 +339,7 @@ local function show_prediction(name, lever)
 	-- Ask only once there is something to apply the lever to.
 	local _, list = pad_build()
 	if #list == 0 then
-		say(name, "First build a shape in the glass box on the left, marked YOUR SHAPE: pick a block with keys 1 to 8 "
+		crystalminer.say(name, "First build a shape in the glass box on the left, marked YOUR SHAPE: pick a block with keys 1 to 8 "
 			.. "and right-click inside the box. Then hit a lever again.", "#FFFF60")
 		return
 	end
@@ -628,6 +628,21 @@ local function build_world(decor)
 	for _, f in ipairs(on_world_ready) do f() end
 end
 
+-- Evidence for the self-test: a map chunk inside the built area that is generated after the build
+-- started overwrites what the build put there (cm.emerge_stats.late counts them).
+local built_boxes
+core.register_on_generated(function(minp, maxp)
+	if not built_boxes then return end
+	for _, b in ipairs(built_boxes) do
+		if maxp.x >= b.min[1] and minp.x < b.min[1] + b.size[1] and maxp.y >= b.min[2] and minp.y < b.min[2] + b.size[2]
+			and maxp.z >= b.min[3] and minp.z < b.min[3] + b.size[3] then
+			cm.emerge_stats.late = (cm.emerge_stats.late or 0) + 1
+			core.log("warning", "[crystalminer] map chunk at " .. core.pos_to_string(minp) .. " generated after the build")
+			return
+		end
+	end
+end)
+
 core.after(0, function()
 	if storage:get_string("world_version") == WORLD_VERSION then
 		world_ready = true
@@ -640,16 +655,47 @@ core.after(0, function()
 	for _, live in ipairs(regions) do boxes[#boxes + 1] = world_box(live) end
 	for _, b in ipairs(cm.extra_boxes) do boxes[#boxes + 1] = b end
 	local decor = decor_placements()
-	local pending = #boxes
+	-- Every block of every box must really exist before the build. A block comes back CANCELLED
+	-- when another emerge thread is still generating its map chunk (Luanti runs up to 4 of them for a
+	-- singlenode map), for instance for a player who has just joined; that chunk would then be
+	-- written over the build when it is finished, cutting away part of the museum or a world. So
+	-- such blocks are asked for again, a moment later, until each one is there.
+	local st = { retries = 0, gave_up = 0 }
+	cm.emerge_stats = st
+	local MAX_TRIES = 150
+	local outstanding = 0
 	for _, b in ipairs(boxes) do
-		core.emerge_area({ x = b.min[1], y = b.min[2], z = b.min[3] },
-			{ x = b.min[1] + b.size[1] - 1, y = b.min[2] + b.size[2] - 1, z = b.min[3] + b.size[3] - 1 },
-			function(_, _, remaining)
-				if remaining == 0 then
-					pending = pending - 1
-					if pending == 0 then build_world(decor) end
-				end
-			end)
+		local n = 1
+		for i = 1, 3 do
+			n = n * (math.floor((b.min[i] + b.size[i] - 1) / 16) - math.floor(b.min[i] / 16) + 1)
+		end
+		outstanding = outstanding + n
+	end
+	st.total = outstanding
+	local function request(pos1, pos2, tries)
+		core.emerge_area(pos1, pos2, function(blockpos, action)
+			st[action] = (st[action] or 0) + 1
+			local failed = action == core.EMERGE_CANCELLED or action == core.EMERGE_ERRORED
+			if failed and tries < MAX_TRIES then
+				st.retries = st.retries + 1
+				local p = { x = blockpos.x * 16, y = blockpos.y * 16, z = blockpos.z * 16 }
+				core.after(0.2, function() request(p, p, tries + 1) end)
+				return
+			end
+			if failed then
+				st.gave_up = st.gave_up + 1
+				core.log("error", "[crystalminer] map block " .. core.pos_to_string(blockpos) .. " could not be generated")
+			end
+			outstanding = outstanding - 1
+			if outstanding == 0 then
+				built_boxes = boxes
+				build_world(decor)
+			end
+		end)
+	end
+	for _, b in ipairs(boxes) do
+		request({ x = b.min[1], y = b.min[2], z = b.min[3] },
+			{ x = b.min[1] + b.size[1] - 1, y = b.min[2] + b.size[2] - 1, z = b.min[3] + b.size[3] - 1 }, 1)
 	end
 end)
 

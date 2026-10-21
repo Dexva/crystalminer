@@ -47,7 +47,11 @@ for d in "$TMP/home/.minetest" "$TMP/home/.luanti" \
 	ln -s "$REPO" "$d/games/crystalminer"
 done
 printf 'gameid = crystalminer\nbackend = sqlite3\nplayer_backend = sqlite3\nauth_backend = sqlite3\nmod_storage_backend = sqlite3\n' > "$TMP/world/world.mt"
-printf 'crystalminer.selftest = true\nserver_announce = false\nmax_forceloaded_blocks = 64\n' > "$TMP/minetest.conf"
+# 4 emerge threads, as Luanti 5.17 picks for a singlenode map: the self-test's visitor then races the
+# initial build the way a player joining a new world does.
+printf 'crystalminer.selftest = true\nserver_announce = false\nmax_forceloaded_blocks = 64\nnum_emerge_threads = 4\n' > "$TMP/minetest.conf"
+# Extra settings for a diagnostic run, e.g. CM_EXTRA_CONF='num_emerge_threads = 1'.
+if [ -n "$CM_EXTRA_CONF" ]; then printf '%s\n' "$CM_EXTRA_CONF" >> "$TMP/minetest.conf"; fi
 
 # timeout is not installed on macOS by default; use it only if present.
 TIMEOUT=""
