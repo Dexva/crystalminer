@@ -9,8 +9,63 @@ local S, content = ...
 
 local T = {}
 
+-- Verified against https://platform.claude.com/docs/en/models/overview (October 2026).
 T.MODEL = "claude-opus-5-5"
 T.URL = "https://api.anthropic.com/v1/messages"
+-- Hard cap on output per request (thinking plus reply). Opus 5.5 always thinks a little, even at
+-- low effort; 4096 leaves ample room for an 80-word answer while bounding the cost of one request.
+T.MAX_TOKENS = 4096
+
+-- Cost and abuse limits.
+T.COOLDOWN = 20        -- seconds between requests from one player
+T.MAX_IN_FLIGHT = 3    -- requests waiting for the API at once, across the whole server
+T.MAX_CHARS = 300      -- longest question or description a player may send
+
+--- Number of characters (UTF-8 code points) in s.
+function T.char_count(s)
+	local _, n = s:gsub("[^\128-\191]", "")
+	return n
+end
+
+--- nil if the text may be sent, otherwise a message for the player.
+function T.check_length(text)
+	if T.char_count(text) > T.MAX_CHARS then
+		return "That is too long for the tutor. Please keep it under " .. T.MAX_CHARS .. " characters."
+	end
+	return nil
+end
+
+function T.new_limiter()
+	return { last = {}, busy = {}, in_flight = 0 }
+end
+
+--- Reserves a request slot for a player. now is in seconds.
+-- Returns true, or false and a friendly message.
+function T.try_start(lim, name, now)
+	if lim.busy[name] then
+		return false, "The tutor is still thinking about your last question."
+	end
+	local last = lim.last[name]
+	if last and now - last < T.COOLDOWN then
+		local wait = math.ceil(T.COOLDOWN - (now - last))
+		return false, "Give the tutor a moment: you can ask again in " .. wait .. " s."
+	end
+	if lim.in_flight >= T.MAX_IN_FLIGHT then
+		return false, "The tutor is helping other players right now. Try again in a few seconds."
+	end
+	lim.busy[name] = true
+	lim.last[name] = now
+	lim.in_flight = lim.in_flight + 1
+	return true
+end
+
+--- Releases the slot taken by try_start once the reply (or error) has arrived.
+function T.finish(lim, name)
+	if lim.busy[name] then
+		lim.busy[name] = nil
+		lim.in_flight = lim.in_flight - 1
+	end
+end
 
 function T.tutor_system_prompt()
 	local lines = {
@@ -67,9 +122,12 @@ end
 local function base(system, user_text)
 	return {
 		model = T.MODEL,
-		max_tokens = 16000,
+		max_tokens = T.MAX_TOKENS,
+		-- https://platform.claude.com/docs/en/build-with-claude/effort (GA, no beta header)
 		output_config = { effort = "low" },
-		-- If a safety classifier declines, the API retries on a fallback model.
+		-- Server-side fallback (beta, needs the anthropic-beta header in T.headers): if a safety
+		-- classifier declines, the API retries on a recommended fallback model.
+		-- https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback#server-side-fallback
 		fallbacks = "default",
 		system = { { type = "text", text = system, cache_control = { type = "ephemeral" } } },
 		messages = { { role = "user", content = user_text } },
@@ -83,6 +141,10 @@ end
 
 function T.symmetry_body(description)
 	local body = base(T.symmetry_system_prompt(), "Description: " .. description)
+	-- Structured outputs, GA, no beta header:
+	-- https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+	-- The field is "explanation", not "reason": the docs warn that a property asking for the
+	-- model's reasoning can trigger a reasoning_extraction refusal; a short explanation is fine.
 	body.output_config.format = {
 		type = "json_schema",
 		schema = {
@@ -93,13 +155,13 @@ function T.symmetry_body(description)
 					description = "Hermann-Mauguin symbol of the crystallographic point group that matches the "
 						.. "description, exactly as written in the list, or 'none' if no point group matches",
 				},
-				reason = {
+				explanation = {
 					type = "string",
 					description = "One short sentence for a student explaining which words in the description "
 						.. "led to this symbol. Do not list the group's operations.",
 				},
 			},
-			required = { "symbol", "reason" },
+			required = { "symbol", "explanation" },
 			additionalProperties = false,
 		},
 	}
@@ -111,6 +173,7 @@ function T.headers(api_key)
 		"Content-Type: application/json",
 		"x-api-key: " .. api_key,
 		"anthropic-version: 2023-06-01",
+		-- Required for the fallbacks field; must be exactly this date for fallbacks = "default".
 		"anthropic-beta: server-side-fallback-2026-07-01",
 	}
 end
@@ -128,6 +191,11 @@ function T.response_text(response)
 	if response.stop_reason == "refusal" then
 		return nil, "The tutor can't answer that one. Try asking about symmetry or crystals."
 	end
+	-- A cut-off reply may be half a sentence or broken JSON, so it is not shown.
+	-- https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons
+	if response.stop_reason == "max_tokens" or response.stop_reason == "model_context_window_exceeded" then
+		return nil, "The tutor's answer was cut off. Try a shorter or simpler question."
+	end
 	local parts = {}
 	for _, block in ipairs(response.content or {}) do
 		if block.type == "text" then parts[#parts + 1] = block.text end
@@ -140,11 +208,16 @@ end
 --- Sends a request. http is Luanti's HTTP API; encode/decode are core.write_json/parse_json.
 -- callback(text_or_nil, error_message_or_nil)
 function T.send(http, api_key, body, encode, decode, callback)
+	local ok, data = pcall(encode, body)
+	if not ok or type(data) ~= "string" then
+		callback(nil, "The tutor could not send that question.")
+		return
+	end
 	http.fetch({
 		url = T.URL,
 		method = "POST",
 		extra_headers = T.headers(api_key),
-		data = encode(body),
+		data = data,
 		timeout = 90,
 	}, function(res)
 		if not res.succeeded then

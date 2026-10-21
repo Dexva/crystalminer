@@ -132,9 +132,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		local choice = k:match("^c_(%d+)$")
 		if choice then
 			if answer_clue(name, id, tonumber(choice)) then
+				cm.sound("crystalminer_right", name)
 				pending_clue[name] = nil
 				core.close_formspec(name, formname)
 			else
+				cm.sound("crystalminer_wrong", name)
 				core.show_formspec(name, formname, clue_formspec(exhibit_by_id(id),
 					"Not quite. Fly close to the model, pick one atom near the middle and count the atoms nearest to it."))
 			end

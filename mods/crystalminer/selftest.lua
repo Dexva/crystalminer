@@ -44,7 +44,49 @@ local function count_in(r, name)
 	return n
 end
 
+--- Every node of the museum's shell that is missing (air or ignore), per part: the four outer
+-- walls, the roof and the floor. A part of the map generated after the build would leave holes.
+local function museum_shell_gaps()
+	local B = cm.lobby
+	local G = cm.GROUND_Y
+	core.load_area({ x = B.X0, y = G, z = B.Z0 }, { x = B.X1, y = B.TOP + 1, z = B.Z1 })
+	local gaps = { south = 0, north = 0, west = 0, east = 0, roof = 0, floor = 0 }
+	local function missing(x, y, z)
+		local n = core.get_node({ x = x, y = y, z = z }).name
+		return n == "air" or n == "ignore"
+	end
+	for x = B.X0, B.X1 do
+		for z = B.Z0, B.Z1 do
+			if missing(x, B.TOP + 1, z) then gaps.roof = gaps.roof + 1 end
+			if missing(x, G, z) then gaps.floor = gaps.floor + 1 end
+			local side = (z == B.Z0 and "south") or (z == B.Z1 and "north") or (x == B.X0 and "west")
+				or (x == B.X1 and "east")
+			if side then
+				local door = side == "south" and (x == B.ENTRANCE[1] or x == B.ENTRANCE[2])
+				for y = door and G + 4 or G + 1, B.TOP do
+					if missing(x, y, z) then gaps[side] = gaps[side] + 1 end
+				end
+			end
+		end
+	end
+	return gaps
+end
+
 local function run()
+	-- The initial build: how the engine answered each emerge request, and whether the museum's
+	-- shell came out whole.
+	local st = cm.emerge_stats or {}
+	results[#results + 1] = string.format("info  emerge callbacks: cancelled %d, errored %d, memory %d, disk %d, generated %d, retries %d, blocks %d; chunks generated after the build %d",
+		st[core.EMERGE_CANCELLED] or 0, st[core.EMERGE_ERRORED] or 0, st[core.EMERGE_FROM_MEMORY] or 0,
+		st[core.EMERGE_FROM_DISK] or 0, st[core.EMERGE_GENERATED] or 0, st.retries or 0, st.total or 0, st.late or 0)
+	check("the initial build waited for every map block (none given up, none generated after it)",
+		(st.gave_up or 0) == 0 and (st.late or 0) == 0, string.format("given up %d, late chunks %d", st.gave_up or 0, st.late or 0))
+	local gaps = museum_shell_gaps()
+	local total = 0
+	for _, v in pairs(gaps) do total = total + v end
+	check("museum shell is complete (outer walls, roof, floor)", total == 0,
+		string.format("missing: south %d, north %d, west %d, east %d, roof %d, floor %d",
+			gaps.south, gaps.north, gaps.west, gaps.east, gaps.roof, gaps.floor))
 	-- Mirror Plaza: a block is mirrored across the plane through column min.x + 12.
 	local m = live("mirror_plaza").region
 	local p = { x = m.min[1] + 2, y = m.min[2], z = m.min[3] + 5 }
@@ -100,6 +142,14 @@ local function run()
 	-- Try-it Pad: an L-shaped build is chiral, so its mirror image cannot be moved to match it,
 	-- while a rotation always matches.
 	local b = cm.PAD_BUILD
+	-- Regression: punching a lever with an empty build box must not error (it once called an undefined `say`).
+	for dx = 0, 4 do for dy = 0, 4 do for dz = 0, 4 do
+		core.set_node({ x = b.x + dx, y = b.y + dy, z = b.z + dz }, { name = "air" })
+	end end end
+	local fake_puncher = { is_player = function() return true end, get_player_name = function() return "selftest_fake" end }
+	local lever_def = core.registered_nodes["crystalminer:lever_" .. cm.LEVERS[1].letter]
+	local punch_ok, punch_err = pcall(lever_def.on_punch, { x = 0, y = 0, z = 0 }, { name = lever_def.name }, fake_puncher)
+	check("pad: punching a lever with an empty build box does not error", punch_ok, tostring(punch_err))
 	for _, o in ipairs({ { 0, 0, 0 }, { 1, 0, 0 }, { 2, 0, 0 }, { 2, 0, 1 }, { 0, 1, 0 }, { 0, 2, 0 } }) do
 		core.set_node({ x = b.x + 1 + o[1], y = b.y + o[2], z = b.z + 1 + o[3] }, { name = "crystalminer:red" })
 	end
@@ -218,20 +268,28 @@ local function run()
 
 	-- Portal Hall: one portal per region, each with its destination; every world has a portal back,
 	-- an entrance arch and its boards.
-	local portals, backs, banners = 0, 0, 0
+	local portals, backs, banners, missing_backs = 0, 0, 0, {}
 	for _, pt in ipairs(cm.lobby.portals()) do
 		local pp = { x = pt.x, y = 1, z = cm.lobby.PORTAL_Z }
 		if core.get_node(pp).name == "crystalminer:teleporter" and core.get_meta(pp):get_string("target") == pt.live.area.id then portals = portals + 1 end
 		local pl = cm.D.plaza(pt.live.region)
 		local back = { x = pl.portal.x, y = 1, z = pl.portal.z }
-		if core.get_node(back).name == "crystalminer:teleporter" and core.get_meta(back):get_string("target") == "portal_hall" then backs = backs + 1 end
+		-- Load the block first: one unloaded since the build reads as "ignore".
+		core.load_area(back)
+		local bn = core.get_node(back).name
+		if bn == "crystalminer:teleporter" and core.get_meta(back):get_string("target") == "portal_hall" then
+			backs = backs + 1
+		else
+			missing_backs[#missing_backs + 1] = pt.live.area.id .. "=" .. bn
+		end
 		for _, obj in ipairs(core.get_objects_inside_radius({ x = pl.arrive.x, y = 8, z = pl.arch_z + 0.5 }, 2)) do
 			local e = obj:get_luaentity()
 			if e and e.name == "crystalminer:sign" then banners = banners + 1 end
 		end
 	end
 	check("portal hall: one portal per world, each with its destination", portals == #cm.regions, tostring(portals))
-	check("every world has a portal back to the museum", backs == #cm.regions, tostring(backs))
+	check("every world has a portal back to the museum", backs == #cm.regions,
+		tostring(backs) .. " " .. table.concat(missing_backs, ", "))
 	check("every world's entrance arch carries its name", banners == #cm.regions, tostring(banners))
 
 	-- Signs and doors in the museum: the welcome board, a plaque above each display, the front door.
@@ -326,11 +384,157 @@ local function run()
 	cm.apply_symmetry("teacher_test", lab, "4mm")
 	check("free lab accepts 4mm", lab.symbol == "4mm" and #lab.region.group.ops == 8, lab.symbol)
 
+	-- Symmetry markers: one endless particle spawner per dot, added and deleted only on change.
+	-- The engine call is real here once (no player is connected, so a playername fails with -1);
+	-- for the rest the spawner functions are swapped for counters.
+	local kl = live("kaleidoscope")
+	local probe = cm.E.marker_def(kl.dots[1], nil)
+	local real = core.add_particlespawner(probe)
+	check("markers: the engine accepts the spawner definition", cm.E.spawner_ok(real), tostring(real))
+	if cm.E.spawner_ok(real) then core.delete_particlespawner(real) end
+	local failed = core.add_particlespawner(cm.E.marker_def(kl.dots[1], "nobody_here"))
+	check("markers: a spawner for a player who is not here is recognised as failed",
+		not cm.E.spawner_ok(failed), tostring(failed))
+	local api, shown, adds, defs_ok = cm.marker_api, {}, 0, true
+	local saved_add, saved_delete = api.add, api.delete
+	local function count() local n = 0 for _ in pairs(shown) do n = n + 1 end return n end
+	api.add = function(def)
+		adds = adds + 1
+		defs_ok = defs_ok and def.playername == "markers" and def.time == 0 and def.minpos == def.maxpos
+		shown[adds] = def
+		return adds
+	end
+	api.delete = function(id, name)
+		defs_ok = defs_ok and name == "markers" and shown[id] ~= nil
+		shown[id] = nil
+	end
+	local elements = core.registered_chatcommands["elements"].func
+	cm.progress("markers").tier = #content.tiers + 1
+	cm.sync_markers("markers", kl)
+	check("markers: entering the Kaleidoscope shows one spawner per dot", count() == #kl.dots and #kl.dots > 1000,
+		count() .. " of " .. #kl.dots)
+	for _ = 1, 10 do cm.sync_markers("markers", kl) end
+	check("markers: staying sends nothing more", adds == #kl.dots, tostring(adds))
+	local axes = 0
+	for _, d in ipairs(kl.dots) do if d.kind == "axes" then axes = axes + 1 end end
+	elements("markers", "axes")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements axes keeps only the axes", count() == axes and adds == #kl.dots, count() .. " of " .. axes)
+	elements("markers", "none")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements none removes them all", count() == 0 and cm.markers.markers == nil, tostring(count()))
+	elements("markers", "all")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements all brings them back", count() == #kl.dots, tostring(count()))
+	cm.sync_markers("markers", live("translation_hall"))
+	check("markers: another region replaces them", count() == #live("translation_hall").dots, tostring(count()))
+	cm.sync_markers("markers", nil)
+	check("markers: leaving removes them all", count() == 0 and cm.markers.markers == nil, tostring(count()))
+	cm.sync_markers("newbie", kl)
+	check("markers: a locked region shows none", count() == 0 and cm.markers.newbie == nil, tostring(count()))
+	check("markers: every spawner was for the player, endless, at one point", defs_ok)
+	api.add, api.delete = saved_add, saved_delete
+
+	-- One window at a time: a guide waits for the pre-test, then shows for where the player is.
+	do
+		local who, shown = "queuetester", {}
+		local function show(n, id) shown[#shown + 1] = id end
+		local saved_due = cm.pretest_due
+		local qp = cm.progress(who)
+		qp.guided = {}
+		cm.guide_enqueue(who, "symmetry_gate", 100)
+		cm.guide_enqueue(who, "tryit_pad", 100)
+		check("guide queue: nothing before the delay", select(2, cm.guide_flush(who, "tryit_pad", 100.5, show)) == "wait")
+		cm.pretest_due = function() return true end
+		check("guide queue: waits while the pre-test is due", select(2, cm.guide_flush(who, "tryit_pad", 102, show)) == "busy")
+		cm.pretest_due = function() return false end
+		cm.note_window(who, "crystalminer:test", "formspec_version[4]size[1,1]")
+		check("guide queue: waits while a crystalminer window is open", cm.window_open(who) == "crystalminer:test"
+			and select(2, cm.guide_flush(who, "tryit_pad", 102, show)) == "busy")
+		cm.note_window_closed(who, "crystalminer:test")
+		qp.guided = { symmetry_gate = true, tryit_pad = true }
+		local id = cm.guide_flush(who, "tryit_pad", 102, show)
+		check("guide queue: after the window closes, the guide for where the player is", id == "tryit_pad"
+			and #shown == 1 and shown[1] == "tryit_pad", tostring(id))
+		check("guide queue: the skipped place shows on the next arrival", qp.guided.symmetry_gate == nil
+			and qp.guided.tryit_pad == true)
+		check("guide queue: empty afterwards", select(2, cm.guide_flush(who, "tryit_pad", 103, show)) == "empty")
+		cm.note_window(who, "crystalminer:quiz", "x")
+		cm.note_window(who, "crystalminer:quiz", "")
+		check("window tracking: show_formspec with \"\" closes", cm.window_open(who) == nil)
+		cm.note_window(who, "other_mod:thing", "x")
+		check("window tracking: other mods' windows are not tracked", cm.window_open(who) == nil)
+		-- The quit the engine sends reaches the tracker even though other handlers return true.
+		cm.note_window(who, "crystalminer:guide", "x")
+		local fake = { get_player_name = function() return who end }
+		for _, f in ipairs(core.registered_on_player_receive_fields) do
+			local ok, handled = pcall(f, fake, "crystalminer:guide", { quit = "true" })
+			if not ok or handled then break end
+		end
+		check("window tracking: a quit closes the window", cm.window_open(who) == nil)
+		cm.pretest_due = saved_due
+	end
+
+	-- The "Next:" line, from fake progress tables.
+	do
+		local H = cm.next_hint
+		local function prog(tier)
+			local p = { tier = tier, answered = {}, visited = { tryit_pad = true } }
+			for t = 0, tier - 1 do
+				for _, q in ipairs(L.questions_for_tier(content, t)) do p.answered[q.id] = true end
+			end
+			return p
+		end
+		check("next hint: new player", H.text(content, L, prog(0), "") == "Next: answer the quiz in Gallery 1 (type /quiz there)")
+		local t1 = H.text(content, L, prog(1), "")
+		check("next hint: tier 1 goes to a world", t1 == "Next: go to the Portal Hall and open Mirror Plaza", t1)
+		check("next hint: in a world with open questions", H.text(content, L, prog(1), "mirror_plaza") == "Next: build here, then type /quiz")
+		local done = prog(L.max_tier(content))
+		for _, q in ipairs(L.questions_for_tier(content, done.tier)) do done.answered[q.id] = true end
+		check("next hint: all done", H.text(content, L, done, "") == "You have finished every tier. Try the Free Lab or /tour.")
+		local np = prog(1)
+		np.visited = nil
+		check("next hint: suggests the Try-it Pad until visited", (H.text(content, L, np, "") or ""):find("Try-it Pad", 1, true) ~= nil)
+	end
+
 	local out = io.open(core.get_worldpath() .. "/crystalminer_selftest.txt", "w")
 	out:write(table.concat(results, "\n") .. "\n" .. (failures == 0 and "PASS" or ("FAILURES " .. failures)) .. "\n")
 	out:close()
 	core.request_shutdown()
 end
+
+-- A visitor who joins while the world is being built: the engine emerges the map around them in
+-- requests of its own, at the same time as the build's. With several emerge threads (Luanti picks
+-- up to 4 for a singlenode map) such a request could still be generating part of the museum when
+-- the build ran, and then overwrote it.
+-- Like a client, it asks for one block at a time, nearest first, while the build's requests are
+-- still queued.
+local visitor_blocks = {}
+for bx = -7, 7 do
+	for bz = -7, 7 do
+		for _, by in ipairs({ -2, 2 }) do visitor_blocks[#visitor_blocks + 1] = { x = bx, y = by, z = bz } end
+	end
+end
+table.sort(visitor_blocks, function(a, b) return a.x * a.x + a.y * a.y + a.z * a.z < b.x * b.x + b.y * b.y + b.z * b.z end)
+local visitor_next = 1
+-- The visitor arrives once this share of the build's blocks has come back: then its requests can
+-- start a chunk of the museum that the build is still waiting for (with 4 emerge threads and no
+-- retries, this cut the museum's north-east chunk in 2 of 12 runs).
+local VISITOR_AFTER = tonumber(core.settings:get("crystalminer.selftest_visitor_after") or "") or 0.8
+core.register_globalstep(function()
+	local st = cm.emerge_stats
+	if not st or not st.total then return end
+	local done = 0
+	for k, v in pairs(st) do if type(k) == "number" then done = done + v end end
+	if done < VISITOR_AFTER * st.total then return end
+	for _ = 1, 400 do
+		local b = visitor_blocks[visitor_next]
+		if not b then return end
+		visitor_next = visitor_next + 1
+		local p = { x = b.x * 16, y = b.y * 16, z = b.z * 16 - 44 }
+		core.emerge_area(p, p)
+	end
+end)
 
 cm.when_ready(function()
 	-- Signs placed while the world was built are stored in the map until a player comes near.

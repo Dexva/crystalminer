@@ -1,0 +1,64 @@
+name: tests
+
+# Run the unit tests and the in-server self-test on every push and pull request.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: engine from ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each Ubuntu release ships a different engine version in its
+        # `minetest-server` package (checked against archive.ubuntu.com):
+        #   ubuntu-22.04 (jammy): 5.4.1+repack-2build1
+        #   ubuntu-24.04 (noble): 5.6.1+dfsg+~1.9.0mt8+dfsg-4build3
+        # The game needs >= 5.4.
+        os: [ubuntu-22.04, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install LuaJIT and the dedicated server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit minetest-server
+
+      # Some older LuaJIT builds (2.1.0-beta3 on jammy) crash with the JIT on, so put
+      # a `luajit` wrapper first on PATH that always passes -joff. tests/run_all.sh
+      # finds it via `command -v luajit`, so run_all.sh needs no changes.
+      - name: Make luajit run with the JIT off
+        run: |
+          real="$(command -v luajit)"
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec %s -joff "$@"\n' "$real" > "$RUNNER_TEMP/bin/luajit"
+          chmod +x "$RUNNER_TEMP/bin/luajit"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Unit tests
+        run: |
+          luajit -v
+          for t in tests/test_*.lua; do luajit "$t"; done
+
+      # /usr/games/minetestserver is Debian's launcher script, which logs to
+      # /var/log/minetest (not writable here), so run the real binary the package
+      # installs (found with dpkg -L). The self-test occasionally segfaults at startup (seen on 5.4.1), in
+      # which case the script prints "Self-test did not run". Retry once, and only for
+      # that case: a real FAIL line (or any other error) fails the job immediately.
+      # shell: bash enables pipefail, so the exit code below is the script's, not tee's.
+      - name: Server self-test
+        shell: bash
+        run: |
+          server="$(dpkg -L minetest-server | grep -E '/minetestserver$' | grep -v '^/usr/games/' | head -1)"
+          echo "Server binary: $server"
+          file "$server" || true
+          status=0
+          tests/run_server_test.sh "$server" 2>&1 | tee test.log || status=$?
+          if [ "$status" -ne 0 ] && grep -q '^Self-test did not run' test.log; then
+            echo "Server did not start the self-test; retrying once."
+            tests/run_server_test.sh "$server"
+          else
+            exit "$status"
+          fi

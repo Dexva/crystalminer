@@ -14,7 +14,7 @@ local http = core.request_http_api and core.request_http_api()
 
 local storage = core.get_mod_storage()
 -- Raise this when the built world changes; existing worlds are then rebuilt on start.
-local WORLD_VERSION = "13"
+local WORLD_VERSION = "14"
 local GROUND_Y = 0
 local SPAWN = content.lobby.spawn
 local LABEL_RANGE = 30
@@ -339,7 +339,7 @@ local function show_prediction(name, lever)
 	-- Ask only once there is something to apply the lever to.
 	local _, list = pad_build()
 	if #list == 0 then
-		say(name, "First build a shape in the glass box on the left, marked YOUR SHAPE: pick a block with keys 1 to 8 "
+		crystalminer.say(name, "First build a shape in the glass box on the left, marked YOUR SHAPE: pick a block with keys 1 to 8 "
 			.. "and right-click inside the box. Then hit a lever again.", "#FFFF60")
 		return
 	end
@@ -444,6 +444,7 @@ core.register_on_placenode(function(pos, newnode, placer)
 	local name = placer and placer:is_player() and placer:get_player_name()
 	if name and hook("on_place", name, pos, { name = newnode.name }) then return true end
 	copy_to_images(pos, { name = newnode.name })
+	if name and crystalminer.sound then crystalminer.sound("crystalminer_copy", name) end
 	-- Blocks are free: do not take the item from the stack.
 	return true
 end)
@@ -471,6 +472,7 @@ place_in_air = function(itemstack, user)
 	core.set_node(p, node)
 	if hook("on_place", name, p, node) then return end
 	copy_to_images(p, node)
+	if crystalminer.sound then crystalminer.sound("crystalminer_copy", name) end
 end
 crystalminer.place_in_air = place_in_air
 
@@ -626,6 +628,21 @@ local function build_world(decor)
 	for _, f in ipairs(on_world_ready) do f() end
 end
 
+-- Evidence for the self-test: a map chunk inside the built area that is generated after the build
+-- started overwrites what the build put there (cm.emerge_stats.late counts them).
+local built_boxes
+core.register_on_generated(function(minp, maxp)
+	if not built_boxes then return end
+	for _, b in ipairs(built_boxes) do
+		if maxp.x >= b.min[1] and minp.x < b.min[1] + b.size[1] and maxp.y >= b.min[2] and minp.y < b.min[2] + b.size[2]
+			and maxp.z >= b.min[3] and minp.z < b.min[3] + b.size[3] then
+			cm.emerge_stats.late = (cm.emerge_stats.late or 0) + 1
+			core.log("warning", "[crystalminer] map chunk at " .. core.pos_to_string(minp) .. " generated after the build")
+			return
+		end
+	end
+end)
+
 core.after(0, function()
 	if storage:get_string("world_version") == WORLD_VERSION then
 		world_ready = true
@@ -638,16 +655,47 @@ core.after(0, function()
 	for _, live in ipairs(regions) do boxes[#boxes + 1] = world_box(live) end
 	for _, b in ipairs(cm.extra_boxes) do boxes[#boxes + 1] = b end
 	local decor = decor_placements()
-	local pending = #boxes
+	-- Every block of every box must really exist before the build. A block comes back CANCELLED
+	-- when another emerge thread is still generating its map chunk (Luanti runs up to 4 of them for a
+	-- singlenode map), for instance for a player who has just joined; that chunk would then be
+	-- written over the build when it is finished, cutting away part of the museum or a world. So
+	-- such blocks are asked for again, a moment later, until each one is there.
+	local st = { retries = 0, gave_up = 0 }
+	cm.emerge_stats = st
+	local MAX_TRIES = 150
+	local outstanding = 0
 	for _, b in ipairs(boxes) do
-		core.emerge_area({ x = b.min[1], y = b.min[2], z = b.min[3] },
-			{ x = b.min[1] + b.size[1] - 1, y = b.min[2] + b.size[2] - 1, z = b.min[3] + b.size[3] - 1 },
-			function(_, _, remaining)
-				if remaining == 0 then
-					pending = pending - 1
-					if pending == 0 then build_world(decor) end
-				end
-			end)
+		local n = 1
+		for i = 1, 3 do
+			n = n * (math.floor((b.min[i] + b.size[i] - 1) / 16) - math.floor(b.min[i] / 16) + 1)
+		end
+		outstanding = outstanding + n
+	end
+	st.total = outstanding
+	local function request(pos1, pos2, tries)
+		core.emerge_area(pos1, pos2, function(blockpos, action)
+			st[action] = (st[action] or 0) + 1
+			local failed = action == core.EMERGE_CANCELLED or action == core.EMERGE_ERRORED
+			if failed and tries < MAX_TRIES then
+				st.retries = st.retries + 1
+				local p = { x = blockpos.x * 16, y = blockpos.y * 16, z = blockpos.z * 16 }
+				core.after(0.2, function() request(p, p, tries + 1) end)
+				return
+			end
+			if failed then
+				st.gave_up = st.gave_up + 1
+				core.log("error", "[crystalminer] map block " .. core.pos_to_string(blockpos) .. " could not be generated")
+			end
+			outstanding = outstanding - 1
+			if outstanding == 0 then
+				built_boxes = boxes
+				build_world(decor)
+			end
+		end)
+	end
+	for _, b in ipairs(boxes) do
+		request({ x = b.min[1], y = b.min[2], z = b.min[3] },
+			{ x = b.min[1] + b.size[1] - 1, y = b.min[2] + b.size[2] - 1, z = b.min[3] + b.size[3] - 1 }, 1)
 	end
 end)
 
@@ -859,7 +907,23 @@ end
 local current_area = {}
 -- Which kinds of symmetry element each player sees; nil means all.
 local element_filter = {}
-local timer, dot_timer = 0, 0
+local timer = 0
+
+-- Symmetry markers: one endless particle spawner per dot and player (see E.sync_markers).
+-- markers[name] is that player's state; marker_api is swappable so the self-test can count calls.
+local markers = {}
+local marker_api = { add = core.add_particlespawner, delete = core.delete_particlespawner }
+crystalminer.markers, crystalminer.marker_api = markers, marker_api
+
+--- Shows player name the markers of region live (nil: none), honouring /elements and locks.
+local function sync_markers(name, live)
+	local filter = element_filter[name]
+	local dots = live and filter ~= "none" and unlocked(name, live) and live.dots or nil
+	markers[name] = E.sync_markers(markers[name], dots, filter,
+		function(d) return marker_api.add(E.marker_def(d, name)) end,
+		function(id) marker_api.delete(id, name) end)
+end
+crystalminer.sync_markers = sync_markers
 
 local function area_id_at(pos)
 	local live = region_near(pos)
@@ -870,7 +934,7 @@ local function area_id_at(pos)
 end
 
 core.register_globalstep(function(dtime)
-	timer, dot_timer = timer + dtime, dot_timer + dtime
+	timer = timer + dtime
 	if timer >= 0.5 then
 		timer = 0
 		for _, player in ipairs(core.get_connected_players()) do
@@ -889,27 +953,8 @@ core.register_globalstep(function(dtime)
 				end
 			end
 			update_labels(player)
-		end
-	end
-	-- Particles last 2.2 s and are refreshed every 2 s, to keep network traffic down.
-	if dot_timer >= 2 then
-		dot_timer = 0
-		for _, player in ipairs(core.get_connected_players()) do
-			local name = player:get_player_name()
-			local live = region_near(player:get_pos())
-			local filter = element_filter[name]
-			if live and #live.dots > 0 and unlocked(name, live) and filter ~= "none" then
-				for _, d in ipairs(live.dots) do
-					if not filter or filter == d.kind then
-						core.add_particle({
-							pos = d.pos, velocity = { x = 0, y = 0, z = 0 }, expirationtime = 2.2, size = d.size,
-							texture = d.kind == "centres" and "crystalminer_centre.png"
-								or ("crystalminer_" .. (d.symbol and ("sym_" .. d.symbol) or "dot") .. ".png^[colorize:" .. d.colour .. ":255"),
-							glow = 14, playername = name,
-						})
-					end
-				end
-			end
+			-- Sends packets only when what the player should see changed.
+			sync_markers(name, region_near(player:get_pos()))
 		end
 	end
 end)
@@ -992,6 +1037,8 @@ end)
 
 core.register_on_leaveplayer(function(player)
 	local name = player:get_player_name()
+	-- The player still exists during on_leaveplayer, so the server forgets these spawners too.
+	sync_markers(name, nil)
 	shown_labels[name], current_area[name], element_filter[name] = nil, nil, nil
 	stereo_hud[name], stereo_off[name] = nil, nil
 end)
@@ -1162,10 +1209,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			choice = tonumber(choice)
 			local q = L.question(content, state.id)
 			if answer(name, state.id, choice) then
+				crystalminer.sound("crystalminer_right", name)
 				pending_question[name] = nil
 				core.close_formspec(name, "crystalminer:quiz")
 				core.after(0.2, function() show_quiz(name) end)
 			elseif q then
+				crystalminer.sound("crystalminer_wrong", name)
 				state.wrong[choice] = true
 				state.feedback = "Not quite. " .. (q.hint or "Look at the copies again, then try another option.")
 				ask_question(name, q, state)
@@ -1189,6 +1238,7 @@ cmd("guide", {
 		local rows = {
 			{ "I", "open your progress board (with buttons to go to each region)" },
 			{ "/tour", "a ten-minute guided tour" },
+			{ "/hint on|off", "show or hide the 'Next:' line above the hotbar" },
 			{ "/step, /byhand", "see each copy appear with its name, or place the copies yourself" },
 			{ "/hunt", "the clue crystals you have solved in the Crystal Museum" },
 			{ "/stereogram on|off", "the textbook diagram of the region's symmetry" },
@@ -1279,6 +1329,14 @@ teleport = function(name, id)
 	end
 	if hook("on_teleport", name, id, player) then return true end
 	return false, "No region called " .. id .. ". Type /regions for the list."
+end
+do -- shimmer for the player who travelled (portal punch, /goto, /spawn, board buttons), only on success
+	local teleport_silent = teleport
+	teleport = function(name, id)
+		local ok, msg = teleport_silent(name, id)
+		if ok and crystalminer.sound then crystalminer.sound("crystalminer_portal", name) end
+		return ok, msg
+	end
 end
 crystalminer.teleport = teleport
 
@@ -1530,7 +1588,8 @@ crystalminer.apply_symmetry = apply_symmetry
 local api_key = core.settings:get("crystalminer.anthropic_api_key")
 if not api_key or api_key == "" then api_key = os.getenv("ANTHROPIC_API_KEY") end
 local tutor_on = http ~= nil and api_key ~= nil and api_key ~= ""
-local waiting = {}
+local tutor_limits = Tutor.new_limiter()
+local function now_s() return core.get_us_time() / 1e6 end
 
 if not tutor_on then
 	core.log("action", "[crystalminer] Tutor off: " .. (http and "no API key set" or "add crystalminer to secure.http_mods"))
@@ -1549,17 +1608,19 @@ cmd("symmetry", {
 			apply_symmetry(name, live, param, nil)
 			return true
 		end
-		if waiting[name] then return false, "The tutor is still thinking." end
-		waiting[name] = true
+		local too_long = Tutor.check_length(param)
+		if too_long then return false, too_long end
+		local ok, busy = Tutor.try_start(tutor_limits, name, now_s())
+		if not ok then return false, busy end
 		say(name, "Working out which symmetry you mean...", "#A0A0A0")
 		Tutor.send(http, api_key, Tutor.symmetry_body(param), core.write_json, core.parse_json, function(text, err2)
-			waiting[name] = nil
+			Tutor.finish(tutor_limits, name)
 			local choice = text and core.parse_json(text)
 			if type(choice) ~= "table" or type(choice.symbol) ~= "string" then
 				say(name, err2 or "The tutor could not read that. Try a point-group symbol, like /symmetry 4mm.", "#FF6060")
 				return
 			end
-			apply_symmetry(name, live, choice.symbol, choice.reason)
+			apply_symmetry(name, live, choice.symbol, type(choice.explanation) == "string" and choice.explanation or nil)
 		end)
 		return true
 	end,
@@ -1572,14 +1633,16 @@ cmd("ask", {
 		if not tutor_on then return false, "The tutor is not set up on this server. See the README." end
 		param = param:trim()
 		if param == "" then return false, "Usage: /ask <your question>" end
-		if waiting[name] then return false, "The tutor is still thinking about your last question." end
-		waiting[name] = true
+		local too_long = Tutor.check_length(param)
+		if too_long then return false, too_long end
+		local ok, busy = Tutor.try_start(tutor_limits, name, now_s())
+		if not ok then return false, busy end
 		local player = core.get_player_by_name(name)
 		local live = player and region_near(player:get_pos())
 		say(name, "You asked: " .. param, "#A0A0A0")
 		Tutor.send(http, api_key, Tutor.ask_body(param, progress(name).tier, live and live.area.name),
 			core.write_json, core.parse_json, function(text, err)
-				waiting[name] = nil
+				Tutor.finish(tutor_limits, name)
 				say(name, core.colorize("#D080FF", "Tutor: ") .. (text or err))
 			end)
 		return true
@@ -1627,9 +1690,11 @@ cm.WORLD_VERSION = WORLD_VERSION
 cm.GUIDES = dofile(modpath .. "/guides.lua")
 cm.SG = dofile(modpath .. "/signs.lua")
 dofile(modpath .. "/doors.lua")
+dofile(modpath .. "/sounds.lua")
 dofile(modpath .. "/lobby.lua")
 dofile(modpath .. "/worlds.lua")
 dofile(modpath .. "/guide_window.lua")
+dofile(modpath .. "/next_hint.lua")
 dofile(modpath .. "/learning.lua")
 dofile(modpath .. "/modes.lua")
 dofile(modpath .. "/museum.lua")
