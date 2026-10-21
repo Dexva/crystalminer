@@ -1,6 +1,6 @@
 # crystalminer: plan
 
-A Minecraft world for learning symmetry, the foundation of crystallography.
+A free Luanti game for learning symmetry, the foundation of crystallography.
 Built for the Open Scientific Intelligence (OSI) Hackathon, 21–22 Oct 2026.
 
 ## Core mechanic: symmetry regions
@@ -82,10 +82,10 @@ fails on the grid (crystallographic restriction).
 
 ## Explanations
 
-- Content is data, not code: `src/main/resources/content.yaml` holds, per
+- Content is data, not code: `mods/crystalminer/content.lua` holds, per
   region and tier, the explanation lines and quiz questions.
-- Delivered in game as a title on entering a region, an action-bar hint, and a
-  written book with the full text.
+- Delivered in game as a title on entering a region and the full text in
+  chat; quizzes open in a window with one button per answer.
 - All text is written and reviewed by people. The LLM does not write it on the
   fly.
 
@@ -103,24 +103,26 @@ fails on the grid (crystallographic restriction).
 
 ## Stack
 
-- Server: Minestom (Apache-2.0, on Maven Central). Players use the official
-  Java client at the version that Minestom release supports.
-- Symmetry engine: plain Java with no game dependency, unit-tested.
-- LLM: Claude API (`claude-opus-5-5`, low effort, server-side fallbacks).
+- Game: Luanti (free, open source, LGPL), as a self-contained Luanti game written
+  in Lua. Everything a player needs is free. (An earlier version used Minestom and
+  Minecraft Java Edition; it is in the git history.)
+- Symmetry engine: pure Lua with no Luanti calls, unit-tested with LuaJIT.
+- LLM (optional, paid per request): Claude API (`claude-opus-5-5`, low effort,
+  server-side fallbacks), called over HTTP.
 
 ## Build order and status
 
 1. Done: symmetry engine + tests (closure, group orders, 25/32,
    doubled-coordinate images).
-2. Done: Minestom server with region mirroring, Tier 0 gate and Tier 1 regions.
+2. Done: game server with region mirroring, Tier 0 gate and Tier 1 regions.
 3. Done: tier-aware explanations from data files; tier progression.
 4. Done: Tier 2 regions; `/ask` tutor.
-5. Done: Tiers 3–4, `/symmetry`, `/whatsymmetry`, directional blocks
-   (facing, axis, half, stair shape, connections).
+5. Done: Tiers 3–4, `/symmetry`, `/whatsymmetry`.
+6. Done: moved to Luanti so everything is free; progress saved with the world;
+   `/settier` needs the `teacher` privilege.
 
 Next:
+- Play through with a Luanti client and fix what looks wrong.
 - Run the tutor against the live API and review its answers for accuracy.
-- Save player progress to disk.
-- Restrict `/settier` to teachers.
 - Plane groups as floor tilings (check the 12-of-17 count first).
 - Playtest with students; pre/post quiz to measure learning.

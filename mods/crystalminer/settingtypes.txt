@@ -1,0 +1,7 @@
+# Anthropic API key for the in-game tutor (/ask and /symmetry with a description).
+# Optional and paid per request; the game is complete without it.
+# The server must also list crystalminer in secure.http_mods.
+crystalminer.anthropic_api_key (Tutor: Anthropic API key) string
+
+# Runs the automated checks in selftest.lua, then shuts the server down. For developers.
+crystalminer.selftest (Run self-test and shut down) bool false
