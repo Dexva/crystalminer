@@ -127,13 +127,38 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	return true
 end)
 
-table.insert(cm.on_join, function(name)
-	if core.settings:get_bool("crystalminer.pretest", true) and not A.complete(record(name), "pre", ITEMS)
-		and cm.progress(name).tier == 0 then
-		core.after(2, function()
-			if core.get_player_by_name(name) then offer_test(name, "pre") end
-		end)
+-- The pre-test is offered once per visit, before any guide window: guide_window.lua holds its
+-- guides back while cm.pretest_due(name) is true.
+local offered = {}
+
+function cm.pretest_due(name)
+	return not offered[name] and core.settings:get_bool("crystalminer.pretest", true)
+		and not A.complete(record(name), "pre", ITEMS) and cm.progress(name).tier == 0
+end
+
+local function offer_when_free(name)
+	if not core.get_player_by_name(name) or not cm.pretest_due(name) then return end
+	-- Never over another crystalminer window (a /quiz typed quickly, say): try again shortly.
+	-- (cm.window_open forgets a window after 10 minutes, so this cannot wait for ever.)
+	if cm.window_open and cm.window_open(name) then
+		core.after(2, offer_when_free, name)
+		return
 	end
+	offered[name] = true
+	offer_test(name, "pre")
+end
+
+table.insert(cm.on_join, function(name)
+	if cm.pretest_due(name) then
+		core.after(2, offer_when_free, name)
+	else
+		offered[name] = true
+	end
+end)
+
+core.register_on_leaveplayer(function(player)
+	local name = player:get_player_name()
+	offered[name], testing[name] = nil, nil
 end)
 
 table.insert(cm.on_levelled, function(name)

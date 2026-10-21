@@ -20,6 +20,12 @@ group. An optional tutor powered by Claude answers questions using only the revi
    For a classroom, tick **Host Server** and have students join your computer's address.
 
 Nothing else is needed: crystalminer is a complete game with its own blocks and textures.
+The main menu shows the game's own icon and header image (`menu/icon.png`, `menu/header.png`,
+drawn by `tools/make_menu.py`).
+
+**For teachers:** `docs/TEACHERS.md` is a guide for running crystalminer in a class: what each
+tier teaches, a 45-minute lesson, the commands you need, hosting, the pre- and post-test, known
+limitations and the sources of the real-world examples.
 
 In game: press **K** to fly, **J** to go fast, and **T** or **/** to open chat for commands.
 All blocks in your inventory are free and never run out.
@@ -49,7 +55,11 @@ spaces are larger than in earlier versions (for example 25 × 16 × 25 for the f
 **Guides for first-time players.** The first time a player arrives anywhere (Gallery 1, the
 Try-it Pad, each world), a window explains the place in plain words: what it is, numbered steps
 of what to do, what they will see, and the word for it, with a picture. `/explain` shows it again,
-and the same steps are on the boards on site. Every number a guide states (how many copies one
+and the same steps are on the boards on site. At the start only one window is open at a time:
+the pre-test comes first (if it is due), and guides wait until it is finished. Most guides (22 of
+25: not the Gate, the Try-it Pad or the Mystery Lab) end with a line "In the real world: ..."
+that links the place's symmetry to a molecule or mineral; the board in each of those worlds shows
+it too, and `docs/TEACHERS.md` lists the sources. Every number a guide states (how many copies one
 block makes) is checked against the engine by the tests, and the pictures are drawn from data the
 engine computes (`tools/figure_data.lua`, `tools/make_figures.py`).
 
@@ -93,16 +103,21 @@ Signs are drawn with real lettering: textures assembled from glyphs of DejaVu Sa
   copies of one direction as dots (above) and rings (below), axis symbols and mirror lines.
 - The quiz window sits at the bottom of the screen so the scene stays visible; questions about a
   Gate display turn the player towards it. A wrong option is greyed out and a hint is shown.
+- A line starting "Next: ..." above the hotbar says what to do next, worked out from the player's
+  tier and answered questions. `/hint off` hides it and `/hint on` shows it again.
 - Press **I** for the progress board: what is left at your tier, with a button to go to each place.
 - To build inside the floating cubes, fly (K) and right-click while pointing at nothing: the block
   goes 3 nodes in front of you.
+- Short sound effects, made by `tools/make_sounds.py` and stored in `mods/crystalminer/sounds/`,
+  play when a copy is made, for right and wrong answers, at doors and when travelling through a
+  portal. The setting `crystalminer.sounds` turns them off.
 - It stays daytime (setting `crystalminer.always_day`), so colours and symbols stay readable.
 - Answering every quiz question of a tier unlocks the next. Regions above a player's tier can be
   visited but not built in. Progress is saved with the world.
 
 Commands: `/guide`, `/quiz`, `/explain`, `/regions`, `/goto <region>`, `/progress`,
 `/elements <all|axes|mirrors|centres|cells|none>`, `/stereogram on|off`, `/step`, `/byhand`,
-`/predict`, `/tour`, `/hunt`, `/pretest`, `/posttest`, `/ask <question>`, `/whatsymmetry`,
+`/predict`, `/tour`, `/hunt`, `/hint [on|off]`, `/pretest`, `/posttest`, `/ask <question>`, `/whatsymmetry`,
 `/symmetry <description or symbol>`, `/challenge`, `/clearlab`, `/spawn`. Teachers (the `teacher`
 privilege; grant it with `/grant <name> teacher`) can use `/settier <tier> [player]`, `/class`,
 which shows every student's tier, scores and predictions, `/exportdata` and
@@ -168,7 +183,13 @@ What Claude does and doesn't do:
 - `/whatsymmetry` is pure code: it tests all 48 cubic-grid operations against the build.
 
 Model: `claude-opus-5-5` at low effort, with server-side fallbacks in case a safety classifier
-declines a request.
+declines a request. Server-side fallback is a beta feature, so requests carry an `anthropic-beta`
+header for it.
+
+Limits, to keep the cost down: a player must wait 20 seconds between requests; at most 3
+requests wait for the API at once across the server; a question or description may be at most
+300 characters; the answer is capped at 4096 tokens, and an answer cut off at that limit is
+discarded rather than shown half-finished.
 
 ## Science checks
 
@@ -211,13 +232,15 @@ tests/run_all.sh
 Needs `luajit` (or `lua5.1`) and a Luanti server binary (`luantiserver`, or `minetestserver` for
 older versions). It runs the unit tests (`test_symmetry`, `test_content`, `test_science`,
 `test_elements`, `test_decor`, `test_showcase`, `test_assess`, `test_museum`, `test_signs`,
-`test_guides`, `test_tutor`; `test_signs` checks that the text of every sign fits it and has
-glyphs, `test_guides` that every guide's numbers match the engine), then
+`test_guides`, `test_next_hint`, `test_tutor`; `test_signs` checks that the text of every sign fits
+it and has glyphs, `test_guides` that every guide's numbers match the engine, `test_next_hint`
+the "Next:" line), then
 starts a real server with `crystalminer.selftest = true`, which places and digs blocks through the
-registered callbacks, checks locking, quizzes, saving, the gate, the Try-it Pad, the floor
+registered callbacks, runs about 82 checks: locking, quizzes, saving, the gate, the Try-it Pad, the floor
 tilings, the architecture, predictions, step mode, the museum and its clues, the teleporters, the
 tour, the data export, the teacher view, the Free Lab, the museum's signs, doors and doorways,
-the Portal Hall and every world's plaza, arch and portal back, and shuts down.
+the Portal Hall and every world's plaza, arch and portal back, the symmetry markers, the order of
+the pre-test and guide windows, and shuts down.
 
 ## Project layout
 
@@ -232,6 +255,8 @@ mods/crystalminer/
   worlds.lua                  each world's arrival plaza, boards, arch and portal back
   signs.lua, doors.lua        signs with lettering and framed pictures; doors
   guides.lua, guide_window.lua  plain-language guides, and the window that shows them
+  next_hint.lua               the "Next:" line above the hotbar and /hint
+  sounds.lua                  sound effects (files in sounds/)
   furniture.lua, sculptures.lua  carpets, benches, plants, desk, plan; the sculptures
   lessons.lua                 tiers, questions, explanations, progress
   learning.lua, assess.lua    pre- and post-test, predictions, class view, data export
@@ -243,12 +268,26 @@ mods/crystalminer/
   tutor.lua                   Claude API requests (raw HTTP)
   content.lua                 all text players read; edit without touching code
   selftest.lua                in-server checks
+  sounds/                     Ogg sound effects, made by tools/make_sounds.py
   textures/                   generated by tools/make_textures.py, make_glyphs.py, make_figures.py
                               (with figure_data.lua and history.py) and make_furniture.py
 tests/                        unit tests and test runners
+docs/TEACHERS.md              a guide for teachers
+menu/                         main-menu icon and header image (made by tools/make_menu.py)
+tools/                        generators: make_textures.py, make_glyphs.py, make_figures.py,
+                              make_furniture.py, make_menu.py, make_sounds.py, history.py,
+                              figure_data.lua
 ```
 
 Crystal axes (z up) map to the world as x → east, y → north, z → up.
+
+## Licence
+
+- Code: GNU LGPL 2.1 or later (see `LICENSE`).
+- Textures, pictures, sounds, menu images and texts: CC BY-SA 4.0 (see `LICENSE.media`).
+- Sign lettering is rendered from DejaVu fonts (see `LICENSE.fonts`).
+
+Copyright (c) 2026 Viejay Ordillo and contributors.
 
 ## Known limitations
 
@@ -257,6 +296,10 @@ Crystal axes (z up) map to the world as x → east, y → north, z → up.
   predictions, step mode and the tour; after the museum redesign, the foyer, Gallery 1 and its
   plaques, the doors, the Portal Hall and a world's plaza. It has not yet been played by students,
   and the learning check has not yet produced data.
+- Symmetry markers are drawn by particle spawners that run on the player's computer. Their
+  particles start at random times, so a marker is blank for a moment now and then (about 0.25 %
+  of the time, by the calculation in `elements.lua`), and a hidden marker disappears within 3
+  seconds.
 - The first start of a new world builds the museum and all 23 worlds, which takes about half a
   minute.
 - The tutor has not been run against the live API (no key was available during development).

@@ -168,6 +168,21 @@ fails on the grid (crystallographic restriction).
     - Pictures: unit cells beside the exhibits, diagrams above the history panels, a plan of the
       museum. Furniture, plants, carpets and sculptures in every room.
 
+11. Done: a calmer start, sounds, cheaper markers and a guide for teachers.
+    - One window at a time at the start: the pre-test first, then the guides (a queue in
+      guide_window.lua); a "Next: ..." line above the hotbar (`/hint on|off`); a tested hint.
+    - Each world's board ends with "In the real world: ...", with sources in docs/TEACHERS.md,
+      a guide for teachers.
+    - Symmetry markers are long-lived particle spawners, sent once on entering a region and
+      removed on leaving, instead of being resent every 2 seconds (the Kaleidoscope's 1,751
+      markers were about 52,530 packets per minute per player; staying there now sends none).
+    - Tutor: request checked against Anthropic's current docs; 20 s between requests per player,
+      at most 3 in flight, questions up to 300 characters, answers cut off at the token limit
+      discarded.
+    - Synthesised sound effects (copies, right and wrong answers, doors, portals); main-menu icon
+      and header; LICENSE.media and LICENSE.fonts; a test for the hint line (the self-test now
+      has about 82 checks).
+
 Next:
 - Pilot the learning check with a class: does the post-test beat the pre-test, and on which
   items? Get ethics approval first if the results will be published.

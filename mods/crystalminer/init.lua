@@ -444,6 +444,7 @@ core.register_on_placenode(function(pos, newnode, placer)
 	local name = placer and placer:is_player() and placer:get_player_name()
 	if name and hook("on_place", name, pos, { name = newnode.name }) then return true end
 	copy_to_images(pos, { name = newnode.name })
+	if name and crystalminer.sound then crystalminer.sound("crystalminer_copy", name) end
 	-- Blocks are free: do not take the item from the stack.
 	return true
 end)
@@ -471,6 +472,7 @@ place_in_air = function(itemstack, user)
 	core.set_node(p, node)
 	if hook("on_place", name, p, node) then return end
 	copy_to_images(p, node)
+	if crystalminer.sound then crystalminer.sound("crystalminer_copy", name) end
 end
 crystalminer.place_in_air = place_in_air
 
@@ -859,7 +861,23 @@ end
 local current_area = {}
 -- Which kinds of symmetry element each player sees; nil means all.
 local element_filter = {}
-local timer, dot_timer = 0, 0
+local timer = 0
+
+-- Symmetry markers: one endless particle spawner per dot and player (see E.sync_markers).
+-- markers[name] is that player's state; marker_api is swappable so the self-test can count calls.
+local markers = {}
+local marker_api = { add = core.add_particlespawner, delete = core.delete_particlespawner }
+crystalminer.markers, crystalminer.marker_api = markers, marker_api
+
+--- Shows player name the markers of region live (nil: none), honouring /elements and locks.
+local function sync_markers(name, live)
+	local filter = element_filter[name]
+	local dots = live and filter ~= "none" and unlocked(name, live) and live.dots or nil
+	markers[name] = E.sync_markers(markers[name], dots, filter,
+		function(d) return marker_api.add(E.marker_def(d, name)) end,
+		function(id) marker_api.delete(id, name) end)
+end
+crystalminer.sync_markers = sync_markers
 
 local function area_id_at(pos)
 	local live = region_near(pos)
@@ -870,7 +888,7 @@ local function area_id_at(pos)
 end
 
 core.register_globalstep(function(dtime)
-	timer, dot_timer = timer + dtime, dot_timer + dtime
+	timer = timer + dtime
 	if timer >= 0.5 then
 		timer = 0
 		for _, player in ipairs(core.get_connected_players()) do
@@ -889,27 +907,8 @@ core.register_globalstep(function(dtime)
 				end
 			end
 			update_labels(player)
-		end
-	end
-	-- Particles last 2.2 s and are refreshed every 2 s, to keep network traffic down.
-	if dot_timer >= 2 then
-		dot_timer = 0
-		for _, player in ipairs(core.get_connected_players()) do
-			local name = player:get_player_name()
-			local live = region_near(player:get_pos())
-			local filter = element_filter[name]
-			if live and #live.dots > 0 and unlocked(name, live) and filter ~= "none" then
-				for _, d in ipairs(live.dots) do
-					if not filter or filter == d.kind then
-						core.add_particle({
-							pos = d.pos, velocity = { x = 0, y = 0, z = 0 }, expirationtime = 2.2, size = d.size,
-							texture = d.kind == "centres" and "crystalminer_centre.png"
-								or ("crystalminer_" .. (d.symbol and ("sym_" .. d.symbol) or "dot") .. ".png^[colorize:" .. d.colour .. ":255"),
-							glow = 14, playername = name,
-						})
-					end
-				end
-			end
+			-- Sends packets only when what the player should see changed.
+			sync_markers(name, region_near(player:get_pos()))
 		end
 	end
 end)
@@ -992,6 +991,8 @@ end)
 
 core.register_on_leaveplayer(function(player)
 	local name = player:get_player_name()
+	-- The player still exists during on_leaveplayer, so the server forgets these spawners too.
+	sync_markers(name, nil)
 	shown_labels[name], current_area[name], element_filter[name] = nil, nil, nil
 	stereo_hud[name], stereo_off[name] = nil, nil
 end)
@@ -1162,10 +1163,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			choice = tonumber(choice)
 			local q = L.question(content, state.id)
 			if answer(name, state.id, choice) then
+				crystalminer.sound("crystalminer_right", name)
 				pending_question[name] = nil
 				core.close_formspec(name, "crystalminer:quiz")
 				core.after(0.2, function() show_quiz(name) end)
 			elseif q then
+				crystalminer.sound("crystalminer_wrong", name)
 				state.wrong[choice] = true
 				state.feedback = "Not quite. " .. (q.hint or "Look at the copies again, then try another option.")
 				ask_question(name, q, state)
@@ -1189,6 +1192,7 @@ cmd("guide", {
 		local rows = {
 			{ "I", "open your progress board (with buttons to go to each region)" },
 			{ "/tour", "a ten-minute guided tour" },
+			{ "/hint on|off", "show or hide the 'Next:' line above the hotbar" },
 			{ "/step, /byhand", "see each copy appear with its name, or place the copies yourself" },
 			{ "/hunt", "the clue crystals you have solved in the Crystal Museum" },
 			{ "/stereogram on|off", "the textbook diagram of the region's symmetry" },
@@ -1279,6 +1283,14 @@ teleport = function(name, id)
 	end
 	if hook("on_teleport", name, id, player) then return true end
 	return false, "No region called " .. id .. ". Type /regions for the list."
+end
+do -- shimmer for the player who travelled (portal punch, /goto, /spawn, board buttons), only on success
+	local teleport_silent = teleport
+	teleport = function(name, id)
+		local ok, msg = teleport_silent(name, id)
+		if ok and crystalminer.sound then crystalminer.sound("crystalminer_portal", name) end
+		return ok, msg
+	end
 end
 crystalminer.teleport = teleport
 
@@ -1530,7 +1542,8 @@ crystalminer.apply_symmetry = apply_symmetry
 local api_key = core.settings:get("crystalminer.anthropic_api_key")
 if not api_key or api_key == "" then api_key = os.getenv("ANTHROPIC_API_KEY") end
 local tutor_on = http ~= nil and api_key ~= nil and api_key ~= ""
-local waiting = {}
+local tutor_limits = Tutor.new_limiter()
+local function now_s() return core.get_us_time() / 1e6 end
 
 if not tutor_on then
 	core.log("action", "[crystalminer] Tutor off: " .. (http and "no API key set" or "add crystalminer to secure.http_mods"))
@@ -1549,17 +1562,19 @@ cmd("symmetry", {
 			apply_symmetry(name, live, param, nil)
 			return true
 		end
-		if waiting[name] then return false, "The tutor is still thinking." end
-		waiting[name] = true
+		local too_long = Tutor.check_length(param)
+		if too_long then return false, too_long end
+		local ok, busy = Tutor.try_start(tutor_limits, name, now_s())
+		if not ok then return false, busy end
 		say(name, "Working out which symmetry you mean...", "#A0A0A0")
 		Tutor.send(http, api_key, Tutor.symmetry_body(param), core.write_json, core.parse_json, function(text, err2)
-			waiting[name] = nil
+			Tutor.finish(tutor_limits, name)
 			local choice = text and core.parse_json(text)
 			if type(choice) ~= "table" or type(choice.symbol) ~= "string" then
 				say(name, err2 or "The tutor could not read that. Try a point-group symbol, like /symmetry 4mm.", "#FF6060")
 				return
 			end
-			apply_symmetry(name, live, choice.symbol, choice.reason)
+			apply_symmetry(name, live, choice.symbol, type(choice.explanation) == "string" and choice.explanation or nil)
 		end)
 		return true
 	end,
@@ -1572,14 +1587,16 @@ cmd("ask", {
 		if not tutor_on then return false, "The tutor is not set up on this server. See the README." end
 		param = param:trim()
 		if param == "" then return false, "Usage: /ask <your question>" end
-		if waiting[name] then return false, "The tutor is still thinking about your last question." end
-		waiting[name] = true
+		local too_long = Tutor.check_length(param)
+		if too_long then return false, too_long end
+		local ok, busy = Tutor.try_start(tutor_limits, name, now_s())
+		if not ok then return false, busy end
 		local player = core.get_player_by_name(name)
 		local live = player and region_near(player:get_pos())
 		say(name, "You asked: " .. param, "#A0A0A0")
 		Tutor.send(http, api_key, Tutor.ask_body(param, progress(name).tier, live and live.area.name),
 			core.write_json, core.parse_json, function(text, err)
-				waiting[name] = nil
+				Tutor.finish(tutor_limits, name)
 				say(name, core.colorize("#D080FF", "Tutor: ") .. (text or err))
 			end)
 		return true
@@ -1627,9 +1644,11 @@ cm.WORLD_VERSION = WORLD_VERSION
 cm.GUIDES = dofile(modpath .. "/guides.lua")
 cm.SG = dofile(modpath .. "/signs.lua")
 dofile(modpath .. "/doors.lua")
+dofile(modpath .. "/sounds.lua")
 dofile(modpath .. "/lobby.lua")
 dofile(modpath .. "/worlds.lua")
 dofile(modpath .. "/guide_window.lua")
+dofile(modpath .. "/next_hint.lua")
 dofile(modpath .. "/learning.lua")
 dofile(modpath .. "/modes.lua")
 dofile(modpath .. "/museum.lua")

@@ -326,6 +326,119 @@ local function run()
 	cm.apply_symmetry("teacher_test", lab, "4mm")
 	check("free lab accepts 4mm", lab.symbol == "4mm" and #lab.region.group.ops == 8, lab.symbol)
 
+	-- Symmetry markers: one endless particle spawner per dot, added and deleted only on change.
+	-- The engine call is real here once (no player is connected, so a playername fails with -1);
+	-- for the rest the spawner functions are swapped for counters.
+	local kl = live("kaleidoscope")
+	local probe = cm.E.marker_def(kl.dots[1], nil)
+	local real = core.add_particlespawner(probe)
+	check("markers: the engine accepts the spawner definition", cm.E.spawner_ok(real), tostring(real))
+	if cm.E.spawner_ok(real) then core.delete_particlespawner(real) end
+	local failed = core.add_particlespawner(cm.E.marker_def(kl.dots[1], "nobody_here"))
+	check("markers: a spawner for a player who is not here is recognised as failed",
+		not cm.E.spawner_ok(failed), tostring(failed))
+	local api, shown, adds, defs_ok = cm.marker_api, {}, 0, true
+	local saved_add, saved_delete = api.add, api.delete
+	local function count() local n = 0 for _ in pairs(shown) do n = n + 1 end return n end
+	api.add = function(def)
+		adds = adds + 1
+		defs_ok = defs_ok and def.playername == "markers" and def.time == 0 and def.minpos == def.maxpos
+		shown[adds] = def
+		return adds
+	end
+	api.delete = function(id, name)
+		defs_ok = defs_ok and name == "markers" and shown[id] ~= nil
+		shown[id] = nil
+	end
+	local elements = core.registered_chatcommands["elements"].func
+	cm.progress("markers").tier = #content.tiers + 1
+	cm.sync_markers("markers", kl)
+	check("markers: entering the Kaleidoscope shows one spawner per dot", count() == #kl.dots and #kl.dots > 1000,
+		count() .. " of " .. #kl.dots)
+	for _ = 1, 10 do cm.sync_markers("markers", kl) end
+	check("markers: staying sends nothing more", adds == #kl.dots, tostring(adds))
+	local axes = 0
+	for _, d in ipairs(kl.dots) do if d.kind == "axes" then axes = axes + 1 end end
+	elements("markers", "axes")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements axes keeps only the axes", count() == axes and adds == #kl.dots, count() .. " of " .. axes)
+	elements("markers", "none")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements none removes them all", count() == 0 and cm.markers.markers == nil, tostring(count()))
+	elements("markers", "all")
+	cm.sync_markers("markers", kl)
+	check("markers: /elements all brings them back", count() == #kl.dots, tostring(count()))
+	cm.sync_markers("markers", live("translation_hall"))
+	check("markers: another region replaces them", count() == #live("translation_hall").dots, tostring(count()))
+	cm.sync_markers("markers", nil)
+	check("markers: leaving removes them all", count() == 0 and cm.markers.markers == nil, tostring(count()))
+	cm.sync_markers("newbie", kl)
+	check("markers: a locked region shows none", count() == 0 and cm.markers.newbie == nil, tostring(count()))
+	check("markers: every spawner was for the player, endless, at one point", defs_ok)
+	api.add, api.delete = saved_add, saved_delete
+
+	-- One window at a time: a guide waits for the pre-test, then shows for where the player is.
+	do
+		local who, shown = "queuetester", {}
+		local function show(n, id) shown[#shown + 1] = id end
+		local saved_due = cm.pretest_due
+		local qp = cm.progress(who)
+		qp.guided = {}
+		cm.guide_enqueue(who, "symmetry_gate", 100)
+		cm.guide_enqueue(who, "tryit_pad", 100)
+		check("guide queue: nothing before the delay", select(2, cm.guide_flush(who, "tryit_pad", 100.5, show)) == "wait")
+		cm.pretest_due = function() return true end
+		check("guide queue: waits while the pre-test is due", select(2, cm.guide_flush(who, "tryit_pad", 102, show)) == "busy")
+		cm.pretest_due = function() return false end
+		cm.note_window(who, "crystalminer:test", "formspec_version[4]size[1,1]")
+		check("guide queue: waits while a crystalminer window is open", cm.window_open(who) == "crystalminer:test"
+			and select(2, cm.guide_flush(who, "tryit_pad", 102, show)) == "busy")
+		cm.note_window_closed(who, "crystalminer:test")
+		qp.guided = { symmetry_gate = true, tryit_pad = true }
+		local id = cm.guide_flush(who, "tryit_pad", 102, show)
+		check("guide queue: after the window closes, the guide for where the player is", id == "tryit_pad"
+			and #shown == 1 and shown[1] == "tryit_pad", tostring(id))
+		check("guide queue: the skipped place shows on the next arrival", qp.guided.symmetry_gate == nil
+			and qp.guided.tryit_pad == true)
+		check("guide queue: empty afterwards", select(2, cm.guide_flush(who, "tryit_pad", 103, show)) == "empty")
+		cm.note_window(who, "crystalminer:quiz", "x")
+		cm.note_window(who, "crystalminer:quiz", "")
+		check("window tracking: show_formspec with \"\" closes", cm.window_open(who) == nil)
+		cm.note_window(who, "other_mod:thing", "x")
+		check("window tracking: other mods' windows are not tracked", cm.window_open(who) == nil)
+		-- The quit the engine sends reaches the tracker even though other handlers return true.
+		cm.note_window(who, "crystalminer:guide", "x")
+		local fake = { get_player_name = function() return who end }
+		for _, f in ipairs(core.registered_on_player_receive_fields) do
+			local ok, handled = pcall(f, fake, "crystalminer:guide", { quit = "true" })
+			if not ok or handled then break end
+		end
+		check("window tracking: a quit closes the window", cm.window_open(who) == nil)
+		cm.pretest_due = saved_due
+	end
+
+	-- The "Next:" line, from fake progress tables.
+	do
+		local H = cm.next_hint
+		local function prog(tier)
+			local p = { tier = tier, answered = {}, visited = { tryit_pad = true } }
+			for t = 0, tier - 1 do
+				for _, q in ipairs(L.questions_for_tier(content, t)) do p.answered[q.id] = true end
+			end
+			return p
+		end
+		check("next hint: new player", H.text(content, L, prog(0), "") == "Next: answer the quiz in Gallery 1 (type /quiz there)")
+		local t1 = H.text(content, L, prog(1), "")
+		check("next hint: tier 1 goes to a world", t1 == "Next: go to the Portal Hall and open Mirror Plaza", t1)
+		check("next hint: in a world with open questions", H.text(content, L, prog(1), "mirror_plaza") == "Next: build here, then type /quiz")
+		local done = prog(L.max_tier(content))
+		for _, q in ipairs(L.questions_for_tier(content, done.tier)) do done.answered[q.id] = true end
+		check("next hint: all done", H.text(content, L, done, "") == "You have finished every tier. Try the Free Lab or /tour.")
+		local np = prog(1)
+		np.visited = nil
+		check("next hint: suggests the Try-it Pad until visited", (H.text(content, L, np, "") or ""):find("Try-it Pad", 1, true) ~= nil)
+	end
+
 	local out = io.open(core.get_worldpath() .. "/crystalminer_selftest.txt", "w")
 	out:write(table.concat(results, "\n") .. "\n" .. (failures == 0 and "PASS" or ("FAILURES " .. failures)) .. "\n")
 	out:close()

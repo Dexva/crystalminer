@@ -3,6 +3,7 @@
 -- and on the boards on site. Written for a first-time visitor of about 12: short sentences, one
 -- new word at a time, and the word explained before it is used.
 --
+-- example: one sentence linking the place's symmetry to something real (sources in docs/TEACHERS.md).
 -- count: how many blocks one block placed away from every symmetry element becomes. The tests
 -- check it against the symmetry engine, and that the "see" text states it.
 -- Directions: north is the way you face when you arrive in a world.
@@ -45,6 +46,7 @@ G.tryit_pad = {
 
 G.mirror_plaza = {
 	title = "Mirror Plaza",
+	example = "A methanol molecule (CH3OH) has one mirror plane and no other symmetry: point group m (chemists write Cs).",
 	count = 2,
 	what = "An invisible mirror stands across the middle of this square, running north to south. It copies "
 		.. "everything you build onto the other side.",
@@ -61,6 +63,7 @@ G.mirror_plaza = {
 
 G.twofold_yard = {
 	title = "Twofold Yard",
+	example = "A hydrogen peroxide molecule (H2O2) has only a 2-fold axis: point group 2 (chemists write C2).",
 	count = 2,
 	what = "An invisible pole stands upright in the middle of this yard. Everything you build is copied half a "
 		.. "turn around the pole, to its opposite side.",
@@ -76,6 +79,7 @@ G.twofold_yard = {
 
 G.fourfold_tower = {
 	title = "Fourfold Tower",
+	example = "Crystals with only a 4-fold axis are rare. Pinnoite, a borate mineral, is one: its crystal class is 4.",
 	count = 4,
 	what = "An invisible pole stands upright in the middle of this tower. Everything you build is copied a "
 		.. "quarter turn around the pole, again and again, so every block appears in four places.",
@@ -91,6 +95,7 @@ G.fourfold_tower = {
 
 G.inversion_core = {
 	title = "Inversion Core",
+	example = "Kyanite, a blue mineral, has only an inversion centre: its crystal class is -1.",
 	count = 2,
 	what = "An invisible point floats in the middle of this big cube. Every block you build is sent straight "
 		.. "through that point to the other side, the same distance away.",
@@ -106,6 +111,7 @@ G.inversion_core = {
 
 G.translation_hall = {
 	title = "Translation Hall",
+	example = "A grain of table salt is one tiny unit cell repeated by translations like these in all three directions.",
 	count = 27,
 	what = "This hall works like a crystal. It is divided into 27 identical boxes, 3 by 3 by 3, each 8 blocks wide. "
 		.. "Whatever you build in one box is copied into every other box.",
@@ -122,6 +128,7 @@ G.translation_hall = {
 
 G.twin_mirrors = {
 	title = "Twin Mirrors",
+	example = "A water molecule (H2O) has the symmetry of this square: point group mm2 (chemists write C2v).",
 	count = 4,
 	what = "Two invisible mirrors cross in the middle of this square: one runs north to south, the other east to west.",
 	steps = {
@@ -137,6 +144,7 @@ G.twin_mirrors = {
 
 G.monoclinic_cube = {
 	title = "Monoclinic Cube",
+	example = "Gypsum, the mineral used to make plaster, forms monoclinic crystals of class 2/m.",
 	count = 4,
 	what = "In this cube, an invisible pole stands upright through the middle, and a flat mirror lies across "
 		.. "the middle like a glass floor.",
@@ -152,6 +160,7 @@ G.monoclinic_cube = {
 
 G.square_court = {
 	title = "Square Court",
+	example = "A bromine pentafluoride molecule (BrF5) is a square pyramid: point group 4mm (chemists write C4v).",
 	count = 8,
 	what = "An invisible quarter-turn pole stands in the middle of this square, and four mirrors pass through it: "
 		.. "two parallel to the sides and two along the diagonals.",
@@ -167,6 +176,7 @@ G.square_court = {
 
 G.orthorhombic_cube = {
 	title = "Orthorhombic Cube",
+	example = "Olivine, a green mineral common in the Earth's mantle, forms orthorhombic crystals of class mmm.",
 	count = 8,
 	what = "Three invisible mirrors meet in the middle of this cube, all at right angles: one north to south, "
 		.. "one east to west, and one lying flat.",
@@ -182,6 +192,7 @@ G.orthorhombic_cube = {
 
 G.diagonal_cube = {
 	title = "Diagonal Cube",
+	example = "A methane molecule (CH4) has four 3-fold axes: look down any C-H bond, and a third of a turn swaps the other three H atoms.",
 	count = 3,
 	what = "An invisible pole runs through this cube from one corner to the opposite corner, along its longest "
 		.. "diagonal. Each copy is turned one third of a turn about it.",
@@ -197,6 +208,7 @@ G.diagonal_cube = {
 
 G.rotoinversion_room = {
 	title = "Rotoinversion Room",
+	example = "Chalcopyrite, a brassy copper ore, has crystal class -42m, which contains a -4 axis.",
 	count = 4,
 	what = "The move here has two steps: turn a quarter turn about the upright pole in the middle, then send the "
 		.. "block through the centre point to the other side.",
@@ -212,6 +224,7 @@ G.rotoinversion_room = {
 
 G.bar_three_room = {
 	title = "Bar-Three Room",
+	example = "Dolomite, a carbonate mineral like calcite, has crystal class -3: a 3-fold axis and an inversion centre, but no mirrors.",
 	count = 6,
 	what = "Two steps again: turn one third of a turn about the long diagonal of the room, then send the block "
 		.. "through the centre point.",
@@ -228,6 +241,7 @@ G.bar_three_room = {
 
 G.kaleidoscope = {
 	title = "Kaleidoscope",
+	example = "Halite (rock salt) crystals have class m-3m and usually grow as cubes.",
 	count = 48,
 	what = "This cube has the full symmetry of a cube: every way of turning a cube so that it still fits its box, "
 		.. "and the mirror image of each.",
@@ -242,6 +256,7 @@ G.kaleidoscope = {
 
 G.impossible_room = {
 	title = "Impossible Room",
+	example = "Snowflakes have six-fold symmetry because ice crystals are hexagonal: a grid that square blocks cannot make.",
 	count = 1,
 	what = "This room was meant to have a six-fold pole: one sixth of a turn. That cannot work in a world made of "
 		.. "square blocks, so the room copies nothing.",
@@ -257,6 +272,7 @@ G.impossible_room = {
 
 G.screw_hall = {
 	title = "Screw Hall",
+	example = "Sugar (sucrose) crystals have space group P2_1, like this hall. About 30% of protein crystals have P2_1 2_1 2_1: three 2_1 axes.",
 	count = 54,
 	what = "Here the copies climb like steps of a staircase: each one is turned half a turn and lifted half a box higher.",
 	steps = {
@@ -271,6 +287,7 @@ G.screw_hall = {
 
 G.glide_hall = {
 	title = "Glide Hall",
+	example = "Footprints left by someone walking on a beach repeat by a glide: each print is the mirror image of the last, moved forward.",
 	count = 32,
 	what = "Here the copies are like footprints in snow: each one is mirrored, then slid half a box forward.",
 	steps = {
@@ -285,6 +302,7 @@ G.glide_hall = {
 
 G.spiral_tower = {
 	title = "Spiral Tower",
+	example = "Egg-white lysozyme, a protein, forms tetragonal crystals with space group P4_3 2_1 2. A 4_3 axis is the mirror twin of 4_1.",
 	count = 48,
 	what = "Here the copies climb round the middle of the tower like a spiral staircase: each one turned a quarter "
 		.. "turn and lifted 2 blocks.",
@@ -294,8 +312,8 @@ G.spiral_tower = {
 		"Watch the steps climb.",
 	},
 	see = "After four quarter turns a copy is right above your step again, 8 blocks higher. 48 copies in all.",
-	word = "A 4_1 screw axis (say 'four-one'). Its mirror image turns the other way. Screw axes are why quartz "
-		.. "crystals come left-handed and right-handed.",
+	word = "A 4_1 screw axis (say 'four-one'). Its mirror image turns the other way. Quartz comes in left- and "
+		.. "right-handed crystals, whose atoms spiral opposite ways: 3_1 and 3_2 screw axes.",
 }
 
 G.mystery_lab = {
@@ -313,6 +331,7 @@ G.mystery_lab = {
 
 G.free_lab = {
 	title = "Free Lab",
+	example = "Mineralogists name a crystal's class the same way: by finding which symmetry moves its shape has.",
 	count = 1,
 	what = "Your own lab. It starts with no symmetry at all, so 1 block stays 1: you decide what happens.",
 	steps = {
@@ -326,6 +345,7 @@ G.free_lab = {
 
 G.mirror_tiles = {
 	title = "Mirror Tiles",
+	example = "Bricks stacked in a plain grid, with no offset between rows (stack bond), have plane group pmm.",
 	count = 144,
 	what = "The floor here is a repeating tile pattern, like a bathroom floor, with mirror lines in two directions.",
 	steps = {
@@ -342,6 +362,7 @@ G.mirror_tiles = {
 
 G.glide_tiles = {
 	title = "Glide Tiles",
+	example = "A herringbone floor of identical wooden blocks has plane group pgg.",
 	count = 144,
 	what = "A repeating floor pattern with half-turn points and glides, but no plain mirrors.",
 	steps = {
@@ -356,6 +377,7 @@ G.glide_tiles = {
 
 G.pinwheel_tiles = {
 	title = "Pinwheel Tiles",
+	example = "The pinwheel tiling of big and small squares, often used for floors, has plane group p4. It is chiral.",
 	count = 144,
 	what = "A repeating floor pattern with quarter-turn points and no mirrors at all.",
 	steps = {
@@ -369,6 +391,7 @@ G.pinwheel_tiles = {
 
 G.weave_tiles = {
 	title = "Weave Tiles",
+	example = "M. C. Escher's drawing of angels and devils (sketch no. 45) has plane group p4g.",
 	count = 288,
 	what = "A repeating floor pattern with quarter-turn points, mirrors and glides; but no mirror passes "
 		.. "through a quarter-turn point.",
@@ -393,12 +416,16 @@ G.howto = "# What to do in a world\n"
 	.. "light-blue dots = mirror, white disc = centre point.\n"
 	.. "The portal behind you goes back to the museum."
 
---- The guide as sign text: heading, what, numbered steps, what you will see, the word.
+--- The guide as sign text: heading, what, numbered steps, what you will see, and the real-world example.
 function G.board_text(g)
 	local lines = { "# " .. g.title, g.what, "" }
 	for i, s in ipairs(g.steps) do lines[#lines + 1] = i .. ". " .. s end
 	lines[#lines + 1] = ""
 	lines[#lines + 1] = g.see
+	if g.example then
+		lines[#lines + 1] = ""
+		lines[#lines + 1] = "In the real world: " .. g.example
+	end
 	return table.concat(lines, "\n")
 end
 

@@ -56,6 +56,21 @@ T.run("the first shape suggested at the Try-it Pad is chiral, so M shows a mirro
 	T.ok(improper, "a row has a mirror")
 end)
 
+T.run("every world's guide has a short real-world example, shown on its board", function()
+	for _, a in ipairs(content.regions) do
+		local g = GD[a.id]
+		if a.id ~= "mystery_lab" and a.id ~= "free_lab" then
+			T.ok(type(g.example) == "string" and #g.example > 0, a.id .. " has no real-world example")
+		end
+		if g.example then
+			T.ok(#g.example <= 160, a.id .. " example is longer than 160 characters")
+			T.ok(GD.board_text(g):find("In the real world: " .. g.example, 1, true) ~= nil, a.id .. " board lacks the example")
+		end
+	end
+	-- the Mystery Lab's example must not give its hidden group away
+	T.ok(GD.mystery_lab.example == nil, "the Mystery Lab has no example")
+end)
+
 T.run("guide boards fit their signs", function()
 	for id, g in pairs(GD) do
 		if type(g) == "table" then

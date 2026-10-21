@@ -155,4 +155,75 @@ function E.dots(r)
 	return dots
 end
 
+---------------------------------------------------------------------------- markers on screen
+
+-- Each dot is shown to a player by its own particle spawner that never ends (time = 0), placed
+-- at the dot's exact position (minpos = maxpos), and deleted when the player should no longer
+-- see it. The server sends one packet when a spawner is added and one when it is deleted, and
+-- none while it runs: the client spawns the particles itself.
+--
+-- A spawner cannot be told to keep one particle alive: in Luanti (5.4.1 to 5.17.0,
+-- src/client/particles.cpp, ParticleSpawner::step) an endless spawner makes amount + 1 tries per
+-- client frame, each succeeding with probability dtime, so particles start at random times at
+-- a mean rate of amount + 1 per second. A dot is blank only if no particle started within the
+-- last MARKER_EXPTIME seconds, a fraction exp(-(amount + 1) * MARKER_EXPTIME) of the time:
+-- exp(-6), about 0.25 %, with the values below. The overlapping copies are invisible because
+-- they are identical and the textures' alpha is 0 or 255. Deleting a spawner does not remove
+-- particles it already made, so a hidden dot disappears within MARKER_EXPTIME seconds.
+E.MARKER_AMOUNT, E.MARKER_EXPTIME = 1, 3
+
+function E.marker_texture(d)
+	if d.kind == "centres" then return "crystalminer_centre.png" end
+	return "crystalminer_" .. (d.symbol and ("sym_" .. d.symbol) or "dot") .. ".png^[colorize:" .. d.colour .. ":255"
+end
+
+--- The add_particlespawner definition for dot d, seen only by player name. Legacy fields only
+-- (minpos, minexptime, ...), which every version from 5.4 on understands.
+function E.marker_def(d, name)
+	local still = { x = 0, y = 0, z = 0 }
+	return {
+		amount = E.MARKER_AMOUNT, time = 0,
+		minpos = d.pos, maxpos = d.pos, minvel = still, maxvel = still, minacc = still, maxacc = still,
+		minexptime = E.MARKER_EXPTIME, maxexptime = E.MARKER_EXPTIME, minsize = d.size, maxsize = d.size,
+		texture = E.marker_texture(d), glow = 14, playername = name,
+	}
+end
+
+--- Whether add_particlespawner succeeded. The docs say it returns -1 on failure, but the engine
+-- (5.4.1 and 5.17.0, l_add_particlespawner) pushes that as a u32, so Lua sees 4294967295;
+-- 5.17 also returns 0 when it has run out of ids. Real ids start at 1.
+function E.spawner_ok(id)
+	return type(id) == "number" and id >= 1 and id < 4294967295
+end
+
+--- Brings one player's markers up to date and returns the new state (or nil when none show).
+-- m: the state from the last call, { dots = <dots table>, filter = <string>, ids = { [i] = id } }.
+-- dots: the dots the player should see (nil for none); filter: nil for all, else a kind.
+-- add(d) returns a spawner id (see E.spawner_ok); delete(id) removes one. Only the
+-- differences are sent: nothing at all when nothing changed.
+function E.sync_markers(m, dots, filter, add, delete)
+	if dots and #dots == 0 then dots = nil end
+	local key = filter or "all"
+	if m and m.dots == dots and m.filter == key then return m end
+	if m and m.dots ~= dots then
+		for _, id in pairs(m.ids) do delete(id) end
+		m = nil
+	end
+	if not dots then return nil end
+	m = m or { dots = dots, ids = {} }
+	m.filter = key
+	for i, d in ipairs(dots) do
+		local want = filter == nil or filter == d.kind
+		local id = m.ids[i]
+		if want and not id then
+			id = add(d)
+			if E.spawner_ok(id) then m.ids[i] = id end
+		elseif id and not want then
+			delete(id)
+			m.ids[i] = nil
+		end
+	end
+	return m
+end
+
 return E

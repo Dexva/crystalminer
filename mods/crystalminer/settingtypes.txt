@@ -12,3 +12,6 @@ crystalminer.pretest (Offer the pre- and post-test) bool true
 
 # Keep it daytime, so colours and symbols stay easy to see.
 crystalminer.always_day (Always daytime) bool true
+
+# Play short, gentle sound effects (copies appearing, quiz answers, doors, portals).
+crystalminer.sounds (Sound effects) bool true

@@ -42,6 +42,7 @@ function cm.toggle_door(pos)
 			core.swap_node(p, { name = open and base or (base .. "_open"), param2 = n.param2 })
 		end
 	end
+	cm.sound_at("crystalminer_door", pos)
 end
 
 -- facedir for a doorway running along x (in a wall that runs east-west) or along z. The
