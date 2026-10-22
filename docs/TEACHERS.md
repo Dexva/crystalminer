@@ -94,8 +94,7 @@ informed consent; the notice in the game is not a substitute.
 - The game has been played by its developers but **not yet by students**, and the learning check
   has not yet produced data. We make no claims about learning outcomes.
 - The first start of a new world takes about half a minute.
-- The optional tutor (`/ask`) uses the paid Claude API and has not been run against the live API.
-  The game is complete without it.
+- The tutor (`/ask`) uses the paid Claude API and has not been run against the live API.
 - The Free Lab's symmetry is shared by everyone on the server and resets when the server restarts.
   The Try-it Pad is also shared: students take turns.
 - Worlds made with an earlier version are rebuilt on start; blocks built there before are not

@@ -1,5 +1,5 @@
 # Anthropic API key for the in-game tutor (/ask and /symmetry with a description).
-# Optional and paid per request; the game is complete without it.
+# Paid per request through the Claude API.
 # The server must also list crystalminer in secure.http_mods.
 crystalminer.anthropic_api_key (Tutor: Anthropic API key) string
 
