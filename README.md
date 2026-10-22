@@ -209,9 +209,10 @@ a mirror image matches only if the shape has a mirror plane or inversion centre 
   a Gate display turn the player towards it. A wrong option is greyed out and a hint is shown.
 - **"Next: ..."** above the hotbar says what to do next, worked out from the player's tier and
   answered questions.
-- **Sounds** play when a copy is made, for right and wrong answers, at doors and at portals. It
-  stays daytime, so colours and symbols stay readable. Both can be turned off in the settings
-  (`crystalminer.sounds`, `crystalminer.always_day`).
+- **Sounds** play when a copy is made, for right and wrong answers, at doors and at portals, and
+  softly for footsteps, jumps and placing or removing blocks. It stays daytime, so colours and
+  symbols stay readable. Both can be turned off in the settings (`crystalminer.sounds`,
+  `crystalminer.always_day`).
 
 ### Ways of learning
 
@@ -375,7 +376,7 @@ mods/crystalminer/
   signs.lua, doors.lua        signs with lettering and framed pictures; doors
   guides.lua, guide_window.lua  plain-language guides, and the window that shows them
   next_hint.lua               the "Next:" line above the hotbar and /hint
-  sounds.lua                  sound effects (files in sounds/)
+  sounds.lua                  sound effects and node sounds (files in sounds/)
   furniture.lua, sculptures.lua  carpets, benches, plants, desk, plan; the sculptures
   lessons.lua                 tiers, questions, explanations, progress
   learning.lua, assess.lua    pre- and post-test, predictions, class view, data export
@@ -388,6 +389,7 @@ mods/crystalminer/
   content.lua                 all text players read; edit without touching code
   selftest.lua                in-server checks
   sounds/                     Ogg sound effects
+  optional_sounds/            the jump sound, sent to players only when sounds are on
   textures/                   generated textures, glyphs and figures
 tests/                        unit tests and test runners
 docs/TEACHERS.md              a guide for teachers

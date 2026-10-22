@@ -15,7 +15,7 @@ local function def(half, open)
 		tiles = { "crystalminer_planks.png", "crystalminer_planks.png", "crystalminer_planks.png",
 			"crystalminer_planks.png", tile, tile },
 		node_box = { type = "fixed", fixed = open and OPEN or CLOSED },
-		groups = { not_in_creative_inventory = 1 }, is_ground_content = false,
+		groups = { not_in_creative_inventory = 1 }, is_ground_content = false, sounds = cm.node_sounds("wood"),
 		on_rightclick = function(pos) cm.toggle_door(pos) end,
 		on_punch = function(pos) cm.toggle_door(pos) end,
 	}
