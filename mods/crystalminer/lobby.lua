@@ -156,7 +156,7 @@ end
 
 function L.portal_text(live)
 	local a = live.area
-	return "# " .. a.name .. "\nSymmetry " .. live.symbol .. " · tier " .. a.tier .. "\n" .. short_idea(a)
+	return "# " .. a.name .. "\n## Symmetry " .. live.symbol .. " · tier " .. a.tier .. "\n" .. short_idea(a)
 end
 
 local function build_portals()
@@ -175,7 +175,8 @@ local function build_portals()
 		meta:set_string("infotext", "Portal to " .. p.live.area.name .. " (punch it)")
 		-- The plaque hangs between the alcove's pillars, flush with their front, so that the
 		-- pillars frame it instead of hiding its edges.
-		SG.on_wall({ x = x, y = GROUND + 3, z = z + 1 }, "s", "plaque", L.portal_text(p.live))
+		SG.on_wall({ x = x, y = GROUND + 3, z = z + 1 }, "s", "plaque", L.portal_text(p.live), nil,
+			{ tier = p.live.area.tier })
 	end
 end
 

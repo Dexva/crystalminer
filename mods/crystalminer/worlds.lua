@@ -18,7 +18,7 @@ local function info_text(live)
 		if a.tier > 0 then t = t .. "\n\n" .. string.format(W.locked, a.tier) end
 		return t
 	end
-	local lines = { "# " .. a.name, "Symmetry " .. live.symbol .. " · tier " .. a.tier, "" }
+	local lines = { "# " .. a.name, "## Symmetry " .. live.symbol .. " · tier " .. a.tier, "" }
 	for _, l in ipairs(L.explanation(a, a.tier)) do lines[#lines + 1] = l end
 	if a.tier > 0 then lines[#lines + 1] = "" lines[#lines + 1] = string.format(W.locked, a.tier) end
 	return table.concat(lines, "\n")
