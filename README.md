@@ -33,7 +33,7 @@ the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hacka
 - [Quick start](#quick-start)
 - [How to play](#how-to-play)
 - [For teachers](#for-teachers)
-- [The optional AI tutor](#the-optional-ai-tutor)
+- [The AI tutor](#the-ai-tutor)
 - [Development](#development)
 - [Credits and acknowledgements](#credits-and-acknowledgements)
 - [Licence](#licence)
@@ -264,7 +264,7 @@ anonymous id. `/class` shows each student's scores and the class's mean normaliz
 **Ethics.** If you publish such data as research, you need your institution's ethics approval and
 informed consent; the notice in the game is not a substitute.
 
-## The optional AI tutor
+## The AI tutor
 
 The game is complete and free without the tutor. With it, `/ask` answers questions and `/symmetry`
 understands descriptions such as "a fourfold axis with mirrors". It uses the Claude API, which is
