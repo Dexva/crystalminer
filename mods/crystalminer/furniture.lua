@@ -10,26 +10,27 @@ cm.SCULPTURES = SC
 local function node(name, desc, tiles, box, extra)
 	local def = { description = desc, drawtype = "nodebox", paramtype = "light", paramtype2 = "facedir",
 		tiles = tiles, node_box = { type = "fixed", fixed = box }, groups = { not_in_creative_inventory = 1 },
-		is_ground_content = false, sunlight_propagates = true }
+		is_ground_content = false, sunlight_propagates = true, sounds = cm.node_sounds("hard") }
 	for k, v in pairs(extra or {}) do def[k] = v end
 	core.register_node("crystalminer:" .. name, def)
 end
 
-node("carpet", "Carpet", { "crystalminer_carpet.png" }, { -0.5, -0.5, -0.5, 0.5, -0.4375, 0.5 })
+node("carpet", "Carpet", { "crystalminer_carpet.png" }, { -0.5, -0.5, -0.5, 0.5, -0.4375, 0.5 },
+	{ sounds = cm.node_sounds("soft") })
 node("bench", "Bench", { "crystalminer_planks.png" }, {
 	{ -0.5, -0.06, -0.3, 0.5, 0.06, 0.3 },
 	{ -0.45, -0.5, -0.25, -0.33, -0.06, 0.25 }, { 0.33, -0.5, -0.25, 0.45, -0.06, 0.25 },
-})
+}, { sounds = cm.node_sounds("wood") })
 node("pot", "Plant pot", { "crystalminer_soil.png", "crystalminer_pot.png", "crystalminer_pot.png" },
 	{ -0.3, -0.5, -0.3, 0.3, 0.2, 0.3 })
 core.register_node("crystalminer:plant", {
 	description = "Plant", drawtype = "plantlike", tiles = { "crystalminer_plant.png" }, visual_scale = 1.4,
 	paramtype = "light", sunlight_propagates = true, walkable = false, use_texture_alpha = "clip",
-	groups = { not_in_creative_inventory = 1 }, is_ground_content = false,
+	groups = { not_in_creative_inventory = 1 }, is_ground_content = false, sounds = cm.node_sounds("soft"),
 })
 core.register_node("crystalminer:marble", {
 	description = "Marble", tiles = { "crystalminer_marble.png" }, groups = { not_in_creative_inventory = 1 },
-	is_ground_content = false,
+	is_ground_content = false, sounds = cm.node_sounds("hard"),
 })
 node("post", "Brass post", { "crystalminer_brass.png" }, {
 	{ -0.08, -0.5, -0.08, 0.08, 0.35, 0.08 }, { -0.14, 0.35, -0.14, 0.14, 0.5, 0.14 }, { -0.2, -0.5, -0.2, 0.2, -0.4, 0.2 },

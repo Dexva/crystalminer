@@ -81,7 +81,7 @@ local function open_clue(name, pos)
 end
 
 cm.scenery("clue", "Clue crystal: punch it", "crystalminer_clue.png", {
-	drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
+	sounds = cm.node_sounds("glass"), drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
 	light_source = 10,
 	on_punch = function(pos, _, puncher) if puncher and puncher:is_player() then open_clue(puncher:get_player_name(), pos) end end,
 	on_rightclick = function(pos, _, clicker) if clicker and clicker:is_player() then open_clue(clicker:get_player_name(), pos) end end,

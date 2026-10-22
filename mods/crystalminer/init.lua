@@ -21,6 +21,7 @@ local LABEL_RANGE = 30
 
 crystalminer = { S = S, L = L, G = G, content = content, storage = storage }
 local cm = crystalminer
+dofile(modpath .. "/sounds.lua") -- before the nodes: they take their sounds from cm.node_sounds
 
 -- Hooks the feature modules (learning.lua, museum.lua, reach.lua) fill in. Each is optional.
 --   cm.on_place(name, pos, node) -> true when the module handles the copies itself
@@ -70,6 +71,7 @@ for _, c in ipairs(COLOURS) do
 		tiles = { "crystalminer_" .. c .. ".png" },
 		groups = { dig_immediate = 3, crystalminer_block = 1 },
 		is_ground_content = false,
+		sounds = cm.node_sounds("hard"),
 		on_secondary_use = air_place,
 	})
 end
@@ -83,37 +85,44 @@ core.register_node("crystalminer:glass", {
 	sunlight_propagates = true,
 	groups = { dig_immediate = 3, crystalminer_block = 1 },
 	is_ground_content = false,
+	sounds = cm.node_sounds("glass"),
 	on_secondary_use = air_place,
 })
 buildable[#buildable + 1] = "crystalminer:glass"
 
--- Scenery players cannot dig (no dig groups).
+-- Scenery players cannot dig (no dig groups). Sounds of hard stone unless extra.sounds says otherwise.
 local function scenery(name, desc, tile, extra)
-	local def = { description = desc, tiles = { tile }, groups = { not_in_creative_inventory = 1 }, is_ground_content = false }
+	local def = { description = desc, tiles = { tile }, groups = { not_in_creative_inventory = 1 }, is_ground_content = false,
+		sounds = cm.node_sounds("hard") }
 	for k, v in pairs(extra or {}) do def[k] = v end
 	core.register_node("crystalminer:" .. name, def)
 end
-scenery("ground", "Ground", "crystalminer_ground.png")
-scenery("dirt", "Dirt", "crystalminer_dirt.png")
+scenery("ground", "Ground", "crystalminer_ground.png", { sounds = cm.node_sounds("soft") })
+scenery("dirt", "Dirt", "crystalminer_dirt.png", { sounds = cm.node_sounds("soft") })
 scenery("floor", "Region floor", "crystalminer_floor.png")
 scenery("floor_alt", "Region floor", "crystalminer_floor_alt.png")
 for i = 0, 4 do scenery("border_" .. i, "Tier " .. i .. " border", "crystalminer_border_" .. i .. ".png") end
 scenery("frame", "Region frame", "crystalminer_frame.png", {
-	drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
+	sounds = cm.node_sounds("glass"), drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
 })
 
 -- Architecture and scenery (see decor.lua). None of it can be dug.
-for _, n in ipairs({ "path", "brick", "stone_brick", "plaza", "pillar", "planks", "bark" }) do
+for _, n in ipairs({ "path", "brick", "stone_brick", "plaza", "pillar" }) do
 	scenery(n, title_case(n), "crystalminer_" .. n .. ".png")
 end
-scenery("hedge", "Hedge", "crystalminer_hedge.png", { drawtype = "allfaces_optional", paramtype = "light" })
-scenery("leaves", "Leaves", "crystalminer_leaves.png", { drawtype = "allfaces_optional", paramtype = "light" })
+for _, n in ipairs({ "planks", "bark" }) do
+	scenery(n, title_case(n), "crystalminer_" .. n .. ".png", { sounds = cm.node_sounds("wood") })
+end
+scenery("hedge", "Hedge", "crystalminer_hedge.png", { drawtype = "allfaces_optional", paramtype = "light",
+	sounds = cm.node_sounds("soft") })
+scenery("leaves", "Leaves", "crystalminer_leaves.png", { drawtype = "allfaces_optional", paramtype = "light",
+	sounds = cm.node_sounds("soft") })
 scenery("lamp", "Lamp", "crystalminer_lamp.png", { paramtype = "light", light_source = 13 })
 scenery("roof_glass", "Roof glass", "crystalminer_glass.png", {
-	drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
+	sounds = cm.node_sounds("glass"), drawtype = "glasslike", use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
 })
 scenery("fence", "Fence", "crystalminer_planks.png", {
-	drawtype = "nodebox", paramtype = "light", sunlight_propagates = true,
+	sounds = cm.node_sounds("wood"), drawtype = "nodebox", paramtype = "light", sunlight_propagates = true,
 	node_box = {
 		type = "connected",
 		fixed = { -0.125, -0.5, -0.125, 0.125, 0.5, 0.125 },
@@ -126,17 +135,17 @@ scenery("fence", "Fence", "crystalminer_planks.png", {
 })
 for _, f in ipairs({ "flower_pink", "flower_blue", "flower_white" }) do
 	scenery(f, "Flower", "crystalminer_" .. f .. ".png", {
-		drawtype = "plantlike", paramtype = "light", sunlight_propagates = true, walkable = false,
+		sounds = cm.node_sounds("soft"), drawtype = "plantlike", paramtype = "light", sunlight_propagates = true, walkable = false,
 		selection_box = { type = "fixed", fixed = { -0.25, -0.5, -0.25, 0.25, 0.2, 0.25 } },
 	})
 end
 for _, c in ipairs({ "cyan", "purple", "pink" }) do
 	scenery("crystal_" .. c, "Crystal cluster", "crystalminer_crystal_" .. c .. ".png", {
-		drawtype = "plantlike", paramtype = "light", sunlight_propagates = true, walkable = false,
+		sounds = cm.node_sounds("glass"), drawtype = "plantlike", paramtype = "light", sunlight_propagates = true, walkable = false,
 		use_texture_alpha = "blend", light_source = 6,
 	})
 	scenery("crystal_block_" .. c, "Crystal", "crystalminer_crystal_block_" .. c .. ".png", {
-		drawtype = "glasslike", paramtype = "light", sunlight_propagates = true, use_texture_alpha = "blend",
+		sounds = cm.node_sounds("glass"), drawtype = "glasslike", paramtype = "light", sunlight_propagates = true, use_texture_alpha = "blend",
 		light_source = 5,
 	})
 end
@@ -1697,7 +1706,6 @@ cm.WORLD_VERSION = WORLD_VERSION
 cm.GUIDES = dofile(modpath .. "/guides.lua")
 cm.SG = dofile(modpath .. "/signs.lua")
 dofile(modpath .. "/doors.lua")
-dofile(modpath .. "/sounds.lua")
 dofile(modpath .. "/lobby.lua")
 dofile(modpath .. "/worlds.lua")
 dofile(modpath .. "/guide_window.lua")

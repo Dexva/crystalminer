@@ -497,6 +497,54 @@ local function run()
 		check("next hint: suggests the Try-it Pad until visited", (H.text(content, L, np, "") or ""):find("Try-it Pad", 1, true) ~= nil)
 	end
 
+	-- Sounds (on by default): every node of the game has footstep, dig, dug and place sounds, and
+	-- each named sound has a file (name.ogg or one of the variants name.1.ogg ...). With
+	-- crystalminer.sounds = false (CM_EXTRA_CONF='crystalminer.sounds = false'): none at all.
+	if not core.settings:get_bool("crystalminer.sounds", true) then
+		local with = {}
+		for name, def in pairs(core.registered_nodes) do
+			if name:find("^crystalminer:") and def.sounds and next(def.sounds) then with[#with + 1] = name end
+		end
+		check("sounds off: no crystalminer node has sounds", #with == 0, table.concat(with, ", ", 1, math.min(#with, 8)))
+		check("sounds off: the jump sound was not added", cm.jump_sound.added == false, tostring(cm.jump_sound.added))
+	else
+		local dir = core.get_modpath("crystalminer") .. "/sounds/"
+		local function has_file(sname)
+			for _, suffix in ipairs({ "", ".1", ".2", ".3" }) do
+				local f = io.open(dir .. sname .. suffix .. ".ogg", "rb")
+				if f then f:close(); return true end
+			end
+			return false
+		end
+		local missing, nodes = {}, 0
+		for name, def in pairs(core.registered_nodes) do
+			if name:find("^crystalminer:") then
+				nodes = nodes + 1
+				local s = def.sounds or {}
+				for _, key in ipairs({ "footstep", "dig", "dug", "place", "place_failed" }) do
+					local spec = s[key]
+					if type(spec) ~= "table" or not spec.name or spec.name == "" then
+						missing[#missing + 1] = name .. " " .. key
+					elseif not has_file(spec.name) then
+						missing[#missing + 1] = name .. " " .. key .. " file " .. spec.name
+					end
+				end
+			end
+		end
+		table.sort(missing)
+		check("sounds: every crystalminer node (" .. nodes .. ") has footstep, dig, dug, place sounds with files",
+			nodes > 30 and #missing == 0, table.concat(missing, ", ", 1, math.min(#missing, 8)))
+		-- Checked from Luanti 5.5 on; with older engines (untested) a missing jump sound is only noted.
+		results[#results + 1] = "info  jump sound added: " .. tostring(cm.jump_sound.added)
+		if core.features.dynamic_add_media_table then
+			check("sounds: the jump sound was added", cm.jump_sound.added ~= false, tostring(cm.jump_sound.added))
+		end
+		core.settings:set_bool("crystalminer.sounds", false)
+		local off = cm.node_sounds("hard")
+		core.settings:set_bool("crystalminer.sounds", true)
+		check("sounds: switched off, a node gets no sounds", next(off) == nil)
+	end
+
 	local out = io.open(core.get_worldpath() .. "/crystalminer_selftest.txt", "w")
 	out:write(table.concat(results, "\n") .. "\n" .. (failures == 0 and "PASS" or ("FAILURES " .. failures)) .. "\n")
 	out:close()
