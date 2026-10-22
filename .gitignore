@@ -25,3 +25,5 @@ desktop.ini
 .preview/
 *.tgz
 *.zip
+
+*.env
