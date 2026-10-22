@@ -373,7 +373,8 @@ mods/crystalminer/
   decor.lua                   architecture of each region and the landscape of its world
   lobby.lua                   the museum building: rooms, doors, signs, Portal Hall
   worlds.lua                  each world's arrival plaza, boards, arch and portal back
-  signs.lua, doors.lua        signs with lettering and framed pictures; doors
+  signs.lua, doors.lua        signs lettered in DejaVu Sans (glyph widths in sign_metrics.lua),
+                              and framed pictures; doors
   guides.lua, guide_window.lua  plain-language guides, and the window that shows them
   next_hint.lua               the "Next:" line above the hotbar and /hint
   sounds.lua                  sound effects and node sounds (files in sounds/)
