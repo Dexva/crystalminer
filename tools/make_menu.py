@@ -53,21 +53,138 @@ def make_icon():
     return im.resize((128, 128), Image.LANCZOS)
 
 
+GLYPHS = {
+    "C": [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
+    "R": ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
+    "Y": ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
+    "S": [".####", "#....", "#....", ".###.", "....#", "....#", "####."],
+    "T": ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
+    "A": [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    "L": ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
+    "M": ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
+    "I": ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "#####"],
+    "N": ["#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#"],
+    "E": ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
+    "D": ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."],
+    "O": [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    "K": ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
+    "B": ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
+    ",": [".....", ".....", ".....", ".....", "..##.", "..##.", "..#.."],
+    " ": ["...", "...", "...", "...", "...", "...", "..."],
+}
+# crystal palette: (top colour, bottom colour) per title letter
+AMETHYST = ((214, 140, 255), (128, 66, 214))
+SAPPHIRE = ((120, 190, 255), (48, 94, 214))
+TEAL = ((110, 240, 232), (24, 150, 170))
+EMERALD = ((140, 255, 160), (30, 160, 90))
+GOLD = ((255, 232, 120), (240, 150, 30))
+ROSE = ((255, 160, 200), (214, 70, 130))
+TITLE_PAL = [AMETHYST, SAPPHIRE, TEAL, EMERALD, GOLD, ROSE] * 2
+NAVY = (14, 18, 48)
+PANEL_EDGE = (120, 110, 220)
+
+
+def lerp(a, b, t):
+    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
+
+
+def shade(c, f):
+    return tuple(max(0, min(255, int(v * f))) for v in c)
+
+
+def text_width(text, scale):
+    return sum(len(GLYPHS[ch][0]) for ch in text) * scale + (len(text) - 1) * scale
+
+
+def draw_text(d, x, y, text, scale, palette, shadow=1, bevel=0):
+    """Draw text in blocks of scale x scale px; palette is a function
+    (letter_index) -> (top, bottom) colours blended down the glyph rows."""
+    # pass 1: shadow, pass 2: letters
+    for layer in ("shadow", "face"):
+        cx = x
+        li = 0
+        for ch in text:
+            g = GLYPHS[ch]
+            top, bot = palette(li)
+            for r, row in enumerate(g):
+                for c, v in enumerate(row):
+                    if v != "#":
+                        continue
+                    col = lerp(top, bot, r / 6.0)
+                    px, py = cx + c * scale, y + r * scale
+                    if layer == "shadow":
+                        d.rectangle([px + shadow, py + shadow,
+                                     px + scale - 1 + shadow, py + scale - 1 + shadow],
+                                    fill=shade(col, 0.28))
+                    else:
+                        d.rectangle([px, py, px + scale - 1, py + scale - 1], fill=col)
+                        if bevel:
+                            d.rectangle([px, py, px + scale - 1, py + bevel - 1],
+                                        fill=shade(col, 1.25))
+                            d.rectangle([px, py + scale - bevel, px + scale - 1, py + scale - 1],
+                                        fill=shade(col, 0.72))
+            cx += (len(g[0]) + 1) * scale
+            if ch != " ":
+                li += 1 if layer == "face" or True else 0
+            else:
+                pass
+    return d
+
+
+def sparkle(d, cx, cy, r, col):
+    d.rectangle([cx - r, cy, cx + r, cy], fill=col)
+    d.rectangle([cx, cy - r, cx, cy + r], fill=col)
+    d.rectangle([cx - 1, cy - 1, cx + 1, cy + 1], fill=col)
+
+
 def make_header():
     W, H = 800, 200
-    im = Image.new("RGBA", (W * SS, H * SS), (0, 0, 0, 0))
+    big = Image.new("RGBA", (W * SS, H * SS), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(big)
+    bd.rounded_rectangle([4 * SS, 4 * SS, (W - 4) * SS, (H - 4) * SS], radius=22 * SS,
+                         fill=NAVY, outline=PANEL_EDGE, width=3 * SS)
+    im = big.resize((W, H), Image.LANCZOS)
+    # faint pixel grid, clipped to the panel
+    grid = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(grid)
+    for gx in range(0, W, 20):
+        gd.line([(gx, 0), (gx, H)], fill=(80, 90, 190, 34))
+    for gy in range(0, H, 20):
+        gd.line([(0, gy), (W, gy)], fill=(80, 90, 190, 34))
+    mask = im.getchannel("A").point(lambda v: 255 if v > 250 else 0)
+    inner = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    inner.paste(grid, (0, 0), mask)
+    im = Image.alpha_composite(im, inner)
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle([4 * SS, 4 * SS, (W - 4) * SS, (H - 4) * SS], radius=22 * SS,
-                        fill=CREAM, outline=INK, width=3 * SS)
-    cube(d, 100 * SS, H * SS / 2, 60 * SS)
-    mirror_line(d, 100 * SS, 14 * SS, (H - 14) * SS, 6 * SS, 2 * SS)
-    d.rectangle([200 * SS, 128 * SS, 480 * SS, 133 * SS], fill=YELLOW)
-    d.rectangle([480 * SS, 128 * SS, 760 * SS, 133 * SS], fill=BLUE)
-    title = ImageFont.truetype(FONTDIR + "DejaVuSans-Bold.ttf", 64 * SS)
-    sub = ImageFont.truetype(FONTDIR + "DejaVuSans.ttf", 24 * SS)
-    d.text((200 * SS, 40 * SS), "crystalminer", font=title, fill=INK)
-    d.text((200 * SS, 146 * SS), "Symmetry and crystals, block by block", font=sub, fill=INK)
-    return im.resize((W, H), Image.LANCZOS)
+
+    ts, ss_ = 10, 3
+    title, sub = "CRYSTALMINER", "SYMMETRY AND CRYSTALS, BLOCK BY BLOCK"
+    tx = (W - text_width(title, ts)) // 2
+    draw_text(d, tx, 34, title, ts, lambda i: TITLE_PAL[i], shadow=4, bevel=2)
+    # gradient rule under the title
+    y0 = 34 + 7 * ts + 14
+    x0, x1 = tx, tx + text_width(title, ts)
+    for x in range(x0, x1, 4):
+        t = (x - x0) / (x1 - x0)
+        stops = [AMETHYST[0], SAPPHIRE[0], TEAL[0], EMERALD[0], GOLD[0], ROSE[0]]
+        k = min(int(t * 5), 4)
+        col = lerp(stops[k], stops[k + 1], t * 5 - k)
+        d.rectangle([x, y0, x + 3, y0 + 3], fill=col)
+    sx = (W - text_width(sub, ss_)) // 2
+    n = len(sub.replace(" ", ""))
+    cols = [AMETHYST[0], SAPPHIRE[0], TEAL[0], EMERALD[0], GOLD[0], ROSE[0]]
+    def subpal(i):
+        t = i / max(1, n - 1) * 5
+        k = min(int(t), 4)
+        c = lerp(cols[k], cols[k + 1], t - k)
+        return (c, shade(c, 0.8))
+    draw_text(d, sx, y0 + 18, sub, ss_, subpal, shadow=2)
+    # pixel sparkles (no figure)
+    for (cx, cy, r, c) in [(34, 36, 6, (255, 232, 120)), (772, 160, 6, (110, 240, 232)),
+                           (752, 34, 4, (214, 140, 255)), (48, 164, 4, (140, 255, 160)),
+                           (26, 100, 3, (120, 190, 255)), (776, 96, 3, (255, 160, 200))]:
+        sparkle(d, cx, cy, r, c)
+    return im
 
 
 if __name__ == "__main__":
