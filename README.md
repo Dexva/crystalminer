@@ -9,7 +9,7 @@ of crystallography. Every region of the world has a symmetry group. Whatever a s
 region is copied by every operation of that group: build half a butterfly in Mirror Plaza and the
 mirror finishes it; place one block in the Kaleidoscope and it becomes 48. Students move up
 through five tiers, from "what is a symmetry operation?" to screw axes, glide planes and
-identifying a hidden point group. An optional tutor powered by Claude answers questions using only
+identifying a hidden point group. A tutor powered by Claude answers questions using only
 the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hackathon 2026.
 
 [![tests](https://github.com/vzordillo/crystalminer/actions/workflows/tests.yml/badge.svg)](https://github.com/vzordillo/crystalminer/actions/workflows/tests.yml)
@@ -54,8 +54,8 @@ the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hacka
   guide for teachers.
 - **Checked science**: tests check the numbers and statements the game makes against the symmetry
   engine and International Tables.
-- **Free and complete**: its own blocks, textures, lettering, figures and sounds. The tutor is
-  optional.
+- **Free and complete**: its own blocks, textures, lettering, figures and sounds. The Claude
+  tutor needs an Anthropic API key.
 
 ## Quick start
 
@@ -231,7 +231,7 @@ Stalke, *J. Appl. Cryst.* 55, 144–148, 2022), get the most help.
 | `/whatsymmetry` | Work out the exact symmetry of your build |
 | `/symmetry <description or symbol>` | Give the Free Lab a symmetry, e.g. `/symmetry 4mm` |
 | `/challenge`, `/clearlab` | A build challenge for the Free Lab; empty the Free Lab |
-| `/ask <question>` | Ask the tutor (optional, see below) |
+| `/ask <question>` | Ask the tutor (see [The AI tutor](#the-ai-tutor)) |
 
 **Teachers** (the `teacher` privilege; automatic in single player; grant it with
 `/grant <name> teacher`)
@@ -266,9 +266,9 @@ informed consent; the notice in the game is not a substitute.
 
 ## The AI tutor
 
-The game is complete and free without the tutor. With it, `/ask` answers questions and `/symmetry`
-understands descriptions such as "a fourfold axis with mirrors". It uses the Claude API, which is
-**charged per request** by Anthropic.
+With the tutor, `/ask` answers questions and `/symmetry` understands descriptions such as "a
+fourfold axis with mirrors". It uses the Claude API, which is **charged per request** by
+Anthropic, so it needs an API key.
 
 **To turn it on**, in Luanti's **Settings** (show advanced settings):
 
