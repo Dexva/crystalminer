@@ -51,18 +51,16 @@ those two observations:
 - **Build it, don't just look at it.** Students do not read about a mirror or a screw axis; they
   build next to one and watch it copy their blocks. They predict before they see, place copies by
   hand, and move between the 3D world and the 2D stereogram of textbooks.
-- **A block world is already a lattice.** Every block sits on a cubic grid, as atoms sit on a
-  crystal lattice. The grid's limits become lessons too: only 25 of the 32 crystallographic point
-  groups fit it, and the Impossible Room shows why a six-fold axis cannot be built from cubes.
+- **Worlds to explore, one symmetry each.** 23 worlds, each with its own symmetry: from one
+  mirror to the 48 operations of a cube, floor patterns, screw axes and glide planes. Students
+  step into each world through the Portal Hall and watch its symmetry act on whatever they build.
+- **Learn by playing.** Symmetry becomes something to experience, not only to read about: guess how
+  many copies one block will make, then watch them appear; answer quizzes to unlock the next tier;
+  hunt for clue crystals among the crystal models; take a guided tour; or work out the hidden
+  symmetry of the Mystery Lab.
 - **Free for every classroom.** The game runs on [Luanti](https://www.luanti.org), which is free
   and open source and runs on Windows, macOS, Linux and Android. An earlier prototype used
   Minecraft Java Edition; on Luanti the game itself costs nothing to install or play.
-- **Accurate before anything else.** Automated tests check the numbers and symmetries the game
-  states against its symmetry engine. The Claude tutor answers only from the reviewed lesson
-  text, and when it names a symmetry, the game's own symmetry engine checks it.
-- **Standing on MolCraft.** MolCraft (University of Hull) showed that a block game can carry real
-  chemistry. Its central hall of teleporters, giant models and hidden quiz chests inspired
-  crystalminer's museum, portal hall and clue crystals.
 
 ## Features
 
@@ -293,38 +291,83 @@ informed consent; the notice in the game is not a substitute.
 ## The AI tutor
 
 With the tutor, `/ask` answers questions and `/symmetry` understands descriptions such as "a
-fourfold axis with mirrors". It uses the Claude API, which is **charged per request** by
-Anthropic, so it needs an API key.
+fourfold axis with mirrors". It can run on either of two kinds of AI service, chosen with
+**crystalminer → Tutor: provider** (`crystalminer.tutor_provider`):
 
-**To turn it on**, in Luanti's **Settings** (show advanced settings):
+- `anthropic` (the default): the Claude API, which is **charged per request** by Anthropic and
+  needs an API key.
+- `openai_compatible`: any server that offers an OpenAI-style Chat Completions API
+  (`POST <base URL>/chat/completions`). This includes **free open-source models running on your
+  own computer** with [Ollama](https://ollama.com) or llama.cpp's `llama-server`, and hosted
+  services that offer such an API.
 
-- set **Mods → HTTP mods** (`secure.http_mods`) to `crystalminer`;
-- set **crystalminer → Tutor: Anthropic API key** (`crystalminer.anthropic_api_key`), or start
-  Luanti with the environment variable `ANTHROPIC_API_KEY`.
+Whichever you choose, set **Mods → HTTP mods** (`secure.http_mods`) to `crystalminer` in Luanti's
+**Settings** (show advanced settings). The server log says which provider, address and model the
+tutor uses (never the key), or why it is off.
 
-**What Claude does and does not do.** All text players read is written and reviewed by people
-(in `mods/crystalminer/content.lua`); Claude does not write lessons on the fly.
+**(a) Claude (Anthropic).** Leave the provider at `anthropic` and set **crystalminer → Tutor:
+Anthropic API key** (`crystalminer.anthropic_api_key`), or start Luanti with the environment
+variable `ANTHROPIC_API_KEY`.
+
+**(b) A free local model with Ollama.** Nothing leaves your computer and nothing is charged.
+
+1. Install Ollama from [ollama.com/download](https://ollama.com/download) and start it (open the
+   app, or run `ollama serve` on Linux if it is not already running).
+2. Download a model, for example `ollama pull llama3.2`.
+3. In Luanti's settings, set **Tutor: provider** to `openai_compatible` and **Tutor: model name**
+   (`crystalminer.tutor_model`) to the model's name, e.g. `llama3.2`. **Tutor: base URL**
+   (`crystalminer.tutor_base_url`) already points at Ollama, `http://localhost:11434/v1`; no API
+   key is needed.
+
+**(c) Any other OpenAI-compatible service.** Set the provider to `openai_compatible`, **Tutor: base
+URL** to the service's address up to and including `/v1` (for llama.cpp's `llama-server`,
+`http://localhost:<port>/v1` with the port it was started on), **Tutor: model name** to a model it offers, and, if the service
+needs one, **Tutor: API key for OpenAI-compatible services** (`crystalminer.tutor_api_key`) or the
+environment variable `CRYSTALMINER_TUTOR_API_KEY`. The key is sent as `Authorization: Bearer <key>`.
+
+For slow computers, **Tutor: timeout in seconds** (`crystalminer.tutor_timeout`, default 60) and
+**Tutor: maximum answer length in tokens** (`crystalminer.tutor_max_tokens`; /ask 400 and /symmetry
+200 unless set) apply to `openai_compatible`. Models that think before answering need a larger
+limit, e.g. 2000.
+
+**What the AI does and does not do.** All text players read is written and reviewed by people
+(in `mods/crystalminer/content.lua`); the AI does not write lessons on the fly. Both providers get
+the same instructions.
 
 - `/ask`: answers using only the reviewed text in `mods/crystalminer/content.lua`. It is told to say
   when that text does not cover a question rather than guess, and it is never given the Mystery Lab
-  answer.
-- `/symmetry`: Claude only picks a point-group symbol (structured output). The symmetry engine
-  checks it, builds the group and writes every statement about it. A request for a 6-fold axis is
-  refused by the engine, with the reason. Typing a symbol directly (`/symmetry 4mm`) works without
-  the tutor.
+  answer. Answers are shown as "Tutor:" and can still be wrong, especially from small models.
+- `/symmetry`: the AI only picks a point-group symbol. The game accepts only one of the 32 symbols
+  its symmetry engine knows; otherwise it says the tutor could not pick a valid symmetry. The
+  engine then checks the symbol, builds the group and writes every statement about it, so a wrong
+  answer from the AI can never make the game state something false. Any explanation the AI gives
+  is shown as "Tutor's note (may be wrong)". A request for a 6-fold axis is refused by the engine,
+  with the reason. Typing a symbol directly (`/symmetry 4mm`) works without the tutor.
 - `/whatsymmetry` is pure code: it tests all 48 cubic-grid operations against the build.
 
-**Model.** `claude-opus-5-5` at low effort, with server-side fallbacks in case a safety classifier
-declines a request. Server-side fallback is a beta feature, so requests carry an `anthropic-beta`
-header for it.
+**Requests.** With `anthropic`, the model is `claude-opus-5-5` at low effort, with structured output
+for `/symmetry` and server-side fallbacks in case a safety classifier declines a request.
+Server-side fallback is a beta feature, so requests carry an `anthropic-beta` header for it. With
+`openai_compatible`, requests carry only the model, the messages, `max_tokens` and a low
+`temperature`; `/symmetry` asks for JSON with a `response_format` JSON schema, and if the server
+rejects that, it retries once with `json_object` and once with no `response_format`. Replies with
+the JSON in code fences or among other text are still read.
 
-**Limits**, to keep the cost down: a player must wait 20 seconds between requests; at most 3
-requests wait for the API at once across the server; a question or description may be at most 300
-characters; the answer is capped at 4096 tokens, and an answer cut off at that limit is discarded
-rather than shown half-finished.
+**Limits**, to keep the cost and load down, for both providers: a player must wait 20 seconds
+between requests; at most 3 requests wait for an answer at once across the server; a question or
+description may be at most 300 characters; the answer is capped (4096 tokens for Claude), and an
+answer cut off at that limit is discarded rather than shown half-finished.
 
-**Status.** The tutor has not been run against the live API (no key was available during
-development). Request building and response handling are unit-tested.
+**Status.** The Claude path has not been run against the live API (no key was available during
+development). The `openai_compatible` path was run end to end on a Luanti 5.6.1 server against
+Qwen2.5-1.5B-Instruct (Apache-2.0, Q4_K_M) served by llama-cpp-python 0.3.36 on two CPU cores:
+`/ask` and `/symmetry`, called from a script on the server, both replied in about 10 to 60
+seconds each. That server rejects the JSON
+schema, so `/symmetry` fell back to `json_object` as designed. For "a fourfold axis with mirrors"
+the engine built 4mm correctly, while the model's note miscounted the mirrors, which is why such
+notes are labelled. Only this one small model was tested; expect small models on a CPU to be
+slow and sometimes wrong. Request building and response handling for both
+providers are unit-tested.
 
 ## Development
 

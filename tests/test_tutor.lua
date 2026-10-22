@@ -126,4 +126,319 @@ T.run("responses are read safely", function()
 	T.ok(t == nil and err:find("nothing to say"))
 end)
 
+
+--------------------------------------------------------------------------- providers
+
+-- Canonical text of a table (keys sorted), to compare requests exactly.
+local function ser(v)
+	local t = type(v)
+	if t == "string" then return string.format("%q", v) end
+	if t ~= "table" then return tostring(v) end
+	local keys = {}
+	for k in pairs(v) do keys[#keys + 1] = k end
+	table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+	local out = {}
+	for _, k in ipairs(keys) do out[#out + 1] = tostring(k) .. "=" .. ser(v[k]) end
+	return "{" .. table.concat(out, ",") .. "}"
+end
+
+-- Minimal JSON decoder standing in for core.parse_json(s, nil, true): nil, err on bad input.
+local function json_decode(s)
+	local i = 1
+	local function ws() i = s:find("[^ \t\r\n]", i) or #s + 1 end
+	local value
+	local function str()
+		local out = {}
+		i = i + 1
+		while true do
+			local c = s:sub(i, i)
+			if c == "" then error("unterminated string") end
+			if c == '"' then i = i + 1; return table.concat(out) end
+			if c == "\\" then
+				local e = s:sub(i + 1, i + 1)
+				out[#out + 1] = ({ n = "\n", t = "\t", ['"'] = '"', ["\\"] = "\\", ["/"] = "/" })[e] or error("escape")
+				i = i + 2
+			else
+				out[#out + 1] = c; i = i + 1
+			end
+		end
+	end
+	function value()
+		ws()
+		local c = s:sub(i, i)
+		if c == "{" then
+			local o = {}; i = i + 1; ws()
+			if s:sub(i, i) == "}" then i = i + 1; return o end
+			while true do
+				ws(); if s:sub(i, i) ~= '"' then error("key") end
+				local k = str(); ws()
+				if s:sub(i, i) ~= ":" then error("colon") end
+				i = i + 1; o[k] = value(); ws()
+				local d = s:sub(i, i); i = i + 1
+				if d == "}" then return o end
+				if d ~= "," then error("comma") end
+			end
+		elseif c == "[" then
+			local a = {}; i = i + 1; ws()
+			if s:sub(i, i) == "]" then i = i + 1; return a end
+			while true do
+				a[#a + 1] = value(); ws()
+				local d = s:sub(i, i); i = i + 1
+				if d == "]" then return a end
+				if d ~= "," then error("comma") end
+			end
+		elseif c == '"' then return str()
+		elseif s:sub(i, i + 3) == "true" then i = i + 4; return true
+		elseif s:sub(i, i + 4) == "false" then i = i + 5; return false
+		elseif s:sub(i, i + 3) == "null" then i = i + 4; return nil
+		else
+			local n = s:match("^-?%d+%.?%d*[eE]?[-+]?%d*", i)
+			if not n or n == "" then error("unexpected " .. c) end
+			i = i + #n; return tonumber(n)
+		end
+	end
+	local ok, v = pcall(function() local v = value(); ws(); if i <= #s then error("trailing") end; return v end)
+	if not ok then return nil, v end
+	return v
+end
+
+local function settings(t) return function(k) return t[k] end end
+local no_env = function() return nil end
+local OC = { ["crystalminer.tutor_provider"] = "openai_compatible", ["crystalminer.tutor_model"] = "llama3.2" }
+
+-- Captured from tutor.lua before the provider setting was added (system prompt text replaced by
+-- <SYSTEM> because content.lua may change; it is compared to tutor_system_prompt() separately).
+local GOLDEN_ASK = [==[{fallbacks="default",max_tokens=4096,messages={1={content="Student tier: 2\
+Student is in: Square Court\
+Question: Why is a mirror a symmetry?",role="user"}},model="claude-opus-5-5",output_config={effort="low"},system={1={cache_control={type="ephemeral"},text="<SYSTEM>",type="text"}}}]==]
+local GOLDEN_SYM = [==[{fallbacks="default",max_tokens=4096,messages={1={content="Description: a fourfold axis with mirrors",role="user"}},model="claude-opus-5-5",output_config={effort="low",format={schema={additionalProperties=false,properties={explanation={description="One short sentence for a student explaining which words in the description led to this symbol. Do not list the group's operations.",type="string"},symbol={description="Hermann-Mauguin symbol of the crystallographic point group that matches the description, exactly as written in the list, or 'none' if no point group matches",type="string"}},required={1="symbol",2="explanation"},type="object"},type="json_schema"}},system={1={cache_control={type="ephemeral"},text="<SYSTEM>",type="text"}}}]==]
+local GOLDEN_FETCH = [==[{data="BODY",extra_headers={1="Content-Type: application/json",2="x-api-key: sk-test",3="anthropic-version: 2023-06-01",4="anthropic-beta: server-side-fallback-2026-07-01"},method="POST",timeout=90,url="https://api.anthropic.com/v1/messages"}]==]
+
+T.run("default provider is anthropic and its requests are byte-for-byte unchanged", function()
+	for _, get in ipairs({ settings({ ["crystalminer.anthropic_api_key"] = "sk-test" }),
+		settings({ ["crystalminer.anthropic_api_key"] = "sk-test", ["crystalminer.tutor_provider"] = "anthropic" }) }) do
+		local cfg, off = Tutor.config(get, no_env)
+		T.eq(off, nil); T.eq(cfg.provider, "anthropic"); T.eq(cfg.api_key, "sk-test")
+		local a = Tutor.ask_request(cfg, "Why is a mirror a symmetry?", 2, "Square Court")
+		T.eq(a.system[1].text, Tutor.tutor_system_prompt()); a.system[1].text = "<SYSTEM>"
+		T.eq(ser(a), GOLDEN_ASK)
+		local s = Tutor.symmetry_request(cfg, "a fourfold axis with mirrors")
+		T.eq(s.system[1].text, Tutor.symmetry_system_prompt()); s.system[1].text = "<SYSTEM>"
+		T.eq(ser(s), GOLDEN_SYM)
+		-- the old entry points give the same
+		local a2 = Tutor.ask_body("Why is a mirror a symmetry?", 2, "Square Court"); a2.system[1].text = "<SYSTEM>"
+		T.eq(ser(a2), GOLDEN_ASK)
+		local req
+		Tutor.send({ fetch = function(r) req = r end }, cfg, { x = 1 }, function() return "BODY" end, nil, function() end)
+		T.eq(ser(req), GOLDEN_FETCH)
+		Tutor.send({ fetch = function(r) req = r end }, "sk-test", { x = 1 }, function() return "BODY" end, nil, function() end)
+		T.eq(ser(req), GOLDEN_FETCH)
+		-- send_symmetry sends the Anthropic body once, with no retries
+		local n = 0
+		Tutor.send_symmetry({ fetch = function(r, cb) n = n + 1; req = r
+			cb({ succeeded = true, code = 500, data = "x" }) end }, cfg, "a fourfold axis with mirrors",
+			function(b) return ser(b) end, function() return nil end, function() end)
+		T.eq(n, 1); T.eq(req.url, Tutor.URL)
+		local sym = Tutor.symmetry_body("a fourfold axis with mirrors")
+		T.eq(req.data, ser(sym))
+	end
+end)
+
+T.run("anthropic key: setting, then ANTHROPIC_API_KEY, else off", function()
+	local cfg, off = Tutor.config(settings({}), function(k) return k == "ANTHROPIC_API_KEY" and "env-key" or nil end)
+	T.eq(off, nil); T.eq(cfg.api_key, "env-key")
+	cfg, off = Tutor.config(settings({ ["crystalminer.anthropic_api_key"] = "" }), no_env)
+	T.eq(off, "no API key set")
+	cfg = Tutor.config(settings({ ["crystalminer.anthropic_api_key"] = "sk-secret" }), no_env)
+	T.ok(not Tutor.describe(cfg):find("sk-secret", 1, true))
+	local _, why = Tutor.config(settings({ ["crystalminer.tutor_provider"] = "gemini" }), no_env)
+	T.ok(why:find("unknown"), why)
+end)
+
+T.run("openai_compatible settings: base URL, model, key, env, timeout, tokens", function()
+	local cfg, off = Tutor.config(settings(OC), no_env)
+	T.eq(off, nil)
+	T.eq(cfg.url, "http://localhost:11434/v1/chat/completions")
+	T.eq(cfg.api_key, nil); T.eq(cfg.timeout, 60); T.eq(cfg.ask_tokens, 400); T.eq(cfg.symmetry_tokens, 200)
+	local s = {}
+	for k, v in pairs(OC) do s[k] = v end
+	s["crystalminer.tutor_base_url"] = " https://openrouter.ai/api/v1/ "
+	cfg = Tutor.config(settings(s), no_env)
+	T.eq(cfg.url, "https://openrouter.ai/api/v1/chat/completions")
+	s["crystalminer.tutor_base_url"] = "http://127.0.0.1:8080/v1"
+	T.eq(Tutor.config(settings(s), no_env).url, "http://127.0.0.1:8080/v1/chat/completions")
+	s["crystalminer.tutor_base_url"] = "localhost:11434"
+	local _, why = Tutor.config(settings(s), no_env)
+	T.ok(why and why:find("http"), why)
+	s["crystalminer.tutor_base_url"] = nil
+	cfg = Tutor.config(settings(s), function(k) return k == "CRYSTALMINER_TUTOR_API_KEY" and "env-secret" or nil end)
+	T.eq(cfg.api_key, "env-secret")
+	T.ok(not Tutor.describe(cfg):find("env-secret", 1, true))
+	T.ok(Tutor.describe(cfg):find("llama3.2", 1, true) and Tutor.describe(cfg):find("localhost:11434", 1, true))
+	s["crystalminer.tutor_api_key"] = "set-secret"
+	T.eq(Tutor.config(settings(s), no_env).api_key, "set-secret")
+	s["crystalminer.tutor_timeout"] = "120"; s["crystalminer.tutor_max_tokens"] = "2000"
+	cfg = Tutor.config(settings(s), no_env)
+	T.eq(cfg.timeout, 120); T.eq(cfg.ask_tokens, 2000); T.eq(cfg.symmetry_tokens, 2000)
+	s["crystalminer.tutor_model"] = "  "
+	_, why = Tutor.config(settings(s), no_env)
+	T.ok(why and why:find("tutor_model"), why)
+	s["crystalminer.tutor_model"] = "m"; s["crystalminer.tutor_api_key"] = "a\nb"
+	_, why = Tutor.config(settings(s), no_env)
+	T.ok(why and why:find("control"), why)
+	s["crystalminer.tutor_api_key"] = nil; s["crystalminer.tutor_base_url"] = "https://u:p@example.org/v1"
+	T.ok(not Tutor.describe(Tutor.config(settings(s), no_env)):find("u:p", 1, true))
+end)
+
+T.run("openai_compatible requests: same prompts, no Anthropic fields or headers", function()
+	local cfg = Tutor.config(settings(OC), no_env)
+	local b = Tutor.ask_request(cfg, "Why?", 2, "Square Court")
+	T.eq(b.model, "llama3.2"); T.eq(b.max_tokens, 400); T.eq(b.temperature, 0.2)
+	T.eq(#b.messages, 2)
+	T.eq(b.messages[1].role, "system"); T.eq(b.messages[1].content, Tutor.tutor_system_prompt())
+	T.eq(b.messages[2].role, "user")
+	T.eq(b.messages[2].content, Tutor.ask_body("Why?", 2, "Square Court").messages[1].content)
+	for _, k in ipairs({ "system", "output_config", "fallbacks", "response_format", "stream" }) do T.eq(b[k], nil, k) end
+	local hs = Tutor.openai_headers(cfg.api_key)
+	T.eq(ser(hs), '{1="Content-Type: application/json"}')
+	hs = Tutor.openai_headers("k1")
+	T.eq(ser(hs), '{1="Content-Type: application/json",2="Authorization: Bearer k1"}')
+	for _, line in ipairs(hs) do T.ok(line:match("^[%w%-]+: %S"), "header format: " .. line) end
+
+	local s = Tutor.symmetry_request(cfg, "a fourfold axis")
+	T.eq(s.max_tokens, 200)
+	T.ok(s.messages[1].content:sub(1, #Tutor.symmetry_system_prompt()) == Tutor.symmetry_system_prompt())
+	T.ok(s.messages[1].content:find('"symbol"', 1, true) and s.messages[1].content:find("JSON", 1, true))
+	T.eq(s.messages[2].content, "Description: a fourfold axis")
+	local rf = s.response_format
+	T.eq(rf.type, "json_schema"); T.eq(rf.json_schema.strict, true)
+	T.ok(rf.json_schema.name:match("^[%w_%-]+$") and #rf.json_schema.name <= 64)
+	T.eq(ser(rf.json_schema.schema), ser(Tutor.symmetry_body("x").output_config.format.schema))
+	for _, k in ipairs({ "system", "output_config", "fallbacks" }) do T.eq(s[k], nil, k) end
+	T.eq(ser(Tutor.symmetry_request(cfg, "x", "json_object").response_format), '{type="json_object"}')
+	T.eq(Tutor.symmetry_request(cfg, "x", "none").response_format, nil)
+
+	local req, got
+	Tutor.send({ fetch = function(r, cb) req = r; cb({ succeeded = true, code = 200,
+		data = '{"choices":[{"index":0,"message":{"role":"assistant","content":"Tutor: A mirror."},"finish_reason":"stop"}]}' }) end },
+		cfg, b, function(x) return ser(x) end, json_decode, function(t) got = t end)
+	T.eq(req.url, "http://localhost:11434/v1/chat/completions"); T.eq(req.method, "POST"); T.eq(req.timeout, 60)
+	T.eq(ser(req.extra_headers), '{1="Content-Type: application/json"}')
+	T.eq(got, "Tutor: A mirror."); T.eq(Tutor.strip_label(got), "A mirror.")
+	T.eq(Tutor.strip_label("A mirror."), "A mirror.")
+end)
+
+T.run("openai_compatible responses are read safely", function()
+	local function r(content, fr) return { choices = { { message = { role = "assistant", content = content }, finish_reason = fr } } } end
+	T.eq(Tutor.openai_response_text(r("  A mirror.  ", "stop"), 200), "A mirror.")
+	T.eq(Tutor.openai_response_text(r("<think>\nhmm\n</think>\n\nA mirror.", "stop"), 200), "A mirror.")
+	local t, err = Tutor.openai_response_text(r("<think>still thinking", "stop"), 200)
+	T.ok(t == nil and err:find("nothing to say"))
+	t, err = Tutor.openai_response_text(r('{"symbol": "4', "length"), 200)
+	T.ok(t == nil and err:find("cut off"))
+	t, err = Tutor.openai_response_text(r("x", "content_filter"), 200)
+	T.ok(t == nil and err:find("can't answer"))
+	t, err = Tutor.openai_response_text({ error = { message = "model \"x\" not found", type = "api_error" } }, 404)
+	T.ok(t == nil and err:find("does not know"), err)
+	t, err = Tutor.openai_response_text({ error = { message = "Input should be 'text' or 'json_object'" } }, 500)
+	T.ok(t == nil and err:find("500"), err)
+	t, err = Tutor.openai_response_text({ error = { message = "bad key" } }, 401)
+	T.ok(t == nil and err:find("API key"))
+	t, err = Tutor.openai_response_text({ error = "plain string" }, 200)
+	T.ok(t == nil and err:find("unavailable"))
+	t, err = Tutor.openai_response_text({ choices = {} }, 200)
+	T.ok(t == nil and err:find("unreadable"))
+	t, err = Tutor.openai_response_text("garbage", 200)
+	T.ok(t == nil and err:find("unreadable"))
+	t, err = Tutor.openai_response_text(r(nil, "stop"), 200)
+	T.ok(t == nil and err:find("nothing to say"))
+	T.eq(Tutor.openai_response_text(r({ { type = "text", text = "A " }, { type = "text", text = "mirror." } }, "stop"), 200), "A mirror.")
+	-- through send: non-JSON error bodies, unreadable 200s, network failure, timeout
+	local cfg = Tutor.config(settings(OC), no_env)
+	local function via(res)
+		local got, gerr
+		Tutor.send({ fetch = function(_, cb) cb(res) end }, cfg, {}, function() return "{}" end, json_decode,
+			function(a, b) got, gerr = a, b end)
+		return got, gerr
+	end
+	t, err = via({ succeeded = true, code = 500, data = "Internal Server Error" }); T.ok(t == nil and err:find("500"), err)
+	t, err = via({ succeeded = true, code = 200, data = "<html>" }); T.ok(t == nil and err:find("unreadable"), err)
+	t, err = via({ succeeded = false, code = 0, data = "" }); T.ok(t == nil and err:find("reached"), err)
+	t, err = via({ succeeded = false, timeout = true, code = 0, data = "" }); T.ok(t == nil and err:find("too long"), err)
+	t, err = via({ succeeded = true, code = 200, data = '{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}' })
+	T.eq(t, "ok")
+end)
+
+T.run("symmetry falls back from json_schema to json_object to no response_format", function()
+	local cfg = Tutor.config(settings(OC), no_env)
+	local function run(responses)
+		local sent, n, got, gerr, calls = {}, 0, nil, nil, 0
+		Tutor.send_symmetry({ fetch = function(r, cb)
+			n = n + 1; sent[n] = r.data; cb(responses[n] or responses[#responses]) end },
+			cfg, "a fourfold axis", function(b) return ser(b.response_format) end, json_decode,
+			function(a, b) calls = calls + 1; got, gerr = a, b end)
+		T.eq(calls, 1)
+		return sent, got, gerr
+	end
+	local ok200 = { succeeded = true, code = 200,
+		data = '{"choices":[{"message":{"content":"{\\"symbol\\": \\"4\\", \\"explanation\\": \\"x\\"}"},"finish_reason":"stop"}]}' }
+	local bad = { succeeded = true, code = 500,
+		data = '{"error":{"message":"Input should be \'text\' or \'json_object\'","type":"internal_server_error"}}' }
+	local sent, got = run({ ok200 })
+	T.eq(#sent, 1); T.eq(sent[1], ser({ type = "json_schema", json_schema = {
+		name = "point_group_choice", schema = Tutor.symmetry_body("x").output_config.format.schema, strict = true } }))
+	T.eq(got, '{"symbol": "4", "explanation": "x"}')
+	sent, got = run({ bad, ok200 })
+	T.eq(#sent, 2); T.eq(sent[2], '{type="json_object"}'); T.ok(got)
+	sent, got = run({ bad, { succeeded = true, code = 400, data = "Bad Request" }, ok200 })
+	T.eq(#sent, 3); T.eq(sent[3], "nil"); T.ok(got)
+	local err
+	sent, got, err = run({ bad, bad, bad })
+	T.eq(#sent, 3); T.eq(got, nil); T.ok(err:find("500"))
+	-- not retried: success with a bad answer, auth, missing model, rate limit, network failure
+	for _, res in ipairs({ { succeeded = true, code = 200, data = '{"choices":[{"message":{"content":"x"},"finish_reason":"length"}]}' },
+		{ succeeded = true, code = 401, data = '{"error":{"message":"no"}}' },
+		{ succeeded = true, code = 404, data = "404 page not found" },
+		{ succeeded = true, code = 429, data = "" },
+		{ succeeded = false, code = 0, data = "" } }) do
+		sent = run({ res })
+		T.eq(#sent, 1, ser(res))
+	end
+end)
+
+T.run("the symbol is extracted defensively and only engine-known symbols pass", function()
+	local sym, note = Tutor.choose_symbol('{"symbol": "4mm", "explanation": "Fourfold axis with mirrors."}', json_decode)
+	T.eq(sym, "4mm"); T.eq(note, "Fourfold axis with mirrors.")
+	sym = Tutor.choose_symbol('```json\n{"symbol": "4mm", "explanation": "x"}\n```', json_decode); T.eq(sym, "4mm")
+	sym = Tutor.choose_symbol('```\n{"symbol":"m","explanation":"x"}\n```', json_decode); T.eq(sym, "m")
+	sym = Tutor.choose_symbol('Sure! Here is my answer: {"symbol": " 2 ", "explanation": "x"} Hope it helps.', json_decode)
+	T.eq(sym, "2")
+	sym, note = Tutor.choose_symbol('{"symbol": "none", "explanation": ""}', json_decode); T.eq(sym, "none"); T.eq(note, nil)
+	sym, note = Tutor.choose_symbol('{"symbol": "4mm", "explanation": "' .. string.rep("a", 301) .. '"}', json_decode)
+	T.eq(sym, "4mm"); T.eq(note, nil)
+	sym = Tutor.choose_symbol('{"symbol": "4mm"}', json_decode); T.eq(sym, "4mm")
+	-- wrong answers seen from small local models, and garbage
+	for _, bad in ipairs({ '{"symbol": "I420", "explanation": "x"}', '{"symbol": "cmm", "explanation": "x"}',
+		'{"symbol": 4}', '{"group": "4mm"}', "4mm", "I think it is 4mm.", "", "{", "[]" }) do
+		local s2, msg = Tutor.choose_symbol(bad, json_decode)
+		T.eq(s2, nil, bad); T.ok(msg:find("could not pick a valid symmetry"), bad)
+	end
+	T.eq(Tutor.choose_symbol(nil, json_decode), nil)
+	-- every accepted symbol is one the engine resolves
+	for _, e in ipairs(S.catalog) do
+		local s3 = Tutor.choose_symbol('{"symbol": "' .. e.symbol .. '", "explanation": "x"}', json_decode)
+		T.eq(S.point_group(s3).symbol, e.symbol)
+	end
+end)
+
+T.run("limits are unchanged for both providers", function()
+	T.eq(Tutor.COOLDOWN, 20); T.eq(Tutor.MAX_IN_FLIGHT, 3); T.eq(Tutor.MAX_CHARS, 300); T.eq(Tutor.MAX_TOKENS, 4096)
+	local cfg = Tutor.config(settings({ ["crystalminer.tutor_provider"] = "openai_compatible",
+		["crystalminer.tutor_model"] = "m", ["crystalminer.tutor_max_tokens"] = "999999" }), no_env)
+	T.eq(cfg.ask_tokens, 4096)
+	cfg = Tutor.config(settings({ ["crystalminer.tutor_provider"] = "openai_compatible",
+		["crystalminer.tutor_model"] = "m", ["crystalminer.tutor_timeout"] = "1" }), no_env)
+	T.eq(cfg.timeout, 5)
+end)
+
 T.finish()

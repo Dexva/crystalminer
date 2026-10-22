@@ -1,7 +1,34 @@
-# Anthropic API key for the in-game tutor (/ask and /symmetry with a description).
+# Which AI service runs the in-game tutor (/ask and /symmetry with a description).
+# anthropic: the Claude API, paid per request (needs the Anthropic API key below).
+# openai_compatible: any server with an OpenAI-style Chat Completions API, for example Ollama
+# running a free open-source model on this computer (set the base URL and model name below).
+# Either way the server must also list crystalminer in secure.http_mods.
+crystalminer.tutor_provider (Tutor: provider) enum anthropic anthropic,openai_compatible
+
+# Anthropic API key for the tutor, used when the provider is anthropic.
 # Paid per request through the Claude API.
 # The server must also list crystalminer in secure.http_mods.
 crystalminer.anthropic_api_key (Tutor: Anthropic API key) string
+
+# OpenAI-compatible provider: address of the API, up to and including /v1.
+# Ollama on this computer: http://localhost:11434/v1
+crystalminer.tutor_base_url (Tutor: base URL) string http://localhost:11434/v1
+
+# OpenAI-compatible provider: name of the model, exactly as the server knows it,
+# for example llama3.2 after "ollama pull llama3.2". The tutor stays off until this is set.
+crystalminer.tutor_model (Tutor: model name) string
+
+# OpenAI-compatible provider: API key, sent as "Authorization: Bearer <key>". Leave empty for a
+# local server such as Ollama; hosted services need one. The environment variable
+# CRYSTALMINER_TUTOR_API_KEY is used when this is empty.
+crystalminer.tutor_api_key (Tutor: API key for OpenAI-compatible services) string
+
+# OpenAI-compatible provider: seconds to wait for an answer. Local models on a slow CPU may need more.
+crystalminer.tutor_timeout (Tutor: timeout in seconds) int 60 5 600
+
+# OpenAI-compatible provider: longest answer in tokens. When not set, /ask uses 400 and /symmetry 200.
+# Models that think before answering need more, for example 2000; a cut-off answer is not shown.
+crystalminer.tutor_max_tokens (Tutor: maximum answer length in tokens) int 400 16 4096
 
 # Runs the automated checks in selftest.lua, then shuts the server down. For developers.
 crystalminer.selftest (Run self-test and shut down) bool false

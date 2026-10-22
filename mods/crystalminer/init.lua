@@ -1567,7 +1567,8 @@ local function apply_symmetry(name, live, symbol, reason)
 		say(name, "'" .. symbol .. "' is not a crystallographic point group.", "#FF6060")
 		return
 	end
-	if reason then say(name, core.colorize("#D080FF", "Tutor: ") .. reason) end
+	-- The model's own words may be wrong; the engine's statements below are what describe the group.
+	if reason then say(name, core.colorize("#D080FF", "Tutor's note (may be wrong): ") .. reason) end
 	if not S.fits_grid(e.group) then
 		local sig = S.signature(e.group)
 		say(name, e.symbol .. " is a real crystal symmetry, but it cannot be built here: it needs a "
@@ -1585,14 +1586,15 @@ local function apply_symmetry(name, live, symbol, reason)
 end
 crystalminer.apply_symmetry = apply_symmetry
 
-local api_key = core.settings:get("crystalminer.anthropic_api_key")
-if not api_key or api_key == "" then api_key = os.getenv("ANTHROPIC_API_KEY") end
-local tutor_on = http ~= nil and api_key ~= nil and api_key ~= ""
+-- Provider, URL, model and key settings are read in tutor.lua (Tutor.config). Keys are never logged.
+local tutor_cfg, tutor_off = Tutor.config(function(k) return core.settings:get(k) end, os.getenv)
+local tutor_on = http ~= nil and tutor_off == nil
 local tutor_limits = Tutor.new_limiter()
 local function now_s() return core.get_us_time() / 1e6 end
 
+if tutor_cfg then core.log("action", "[crystalminer] Tutor: " .. Tutor.describe(tutor_cfg)) end
 if not tutor_on then
-	core.log("action", "[crystalminer] Tutor off: " .. (http and "no API key set" or "add crystalminer to secure.http_mods"))
+	core.log("action", "[crystalminer] Tutor off: " .. (http and tutor_off or "add crystalminer to secure.http_mods"))
 end
 
 cmd("symmetry", {
@@ -1613,14 +1615,19 @@ cmd("symmetry", {
 		local ok, busy = Tutor.try_start(tutor_limits, name, now_s())
 		if not ok then return false, busy end
 		say(name, "Working out which symmetry you mean...", "#A0A0A0")
-		Tutor.send(http, api_key, Tutor.symmetry_body(param), core.write_json, core.parse_json, function(text, err2)
+		Tutor.send_symmetry(http, tutor_cfg, param, core.write_json, core.parse_json, function(text, err2)
 			Tutor.finish(tutor_limits, name)
-			local choice = text and core.parse_json(text)
-			if type(choice) ~= "table" or type(choice.symbol) ~= "string" then
+			if not text then
 				say(name, err2 or "The tutor could not read that. Try a point-group symbol, like /symmetry 4mm.", "#FF6060")
 				return
 			end
-			apply_symmetry(name, live, choice.symbol, type(choice.explanation) == "string" and choice.explanation or nil)
+			-- Only a symbol the engine knows gets through; the engine then checks and describes it.
+			local symbol, note = Tutor.choose_symbol(text, core.parse_json)
+			if not symbol then
+				say(name, note, "#FF6060")
+				return
+			end
+			apply_symmetry(name, live, symbol, note)
 		end)
 		return true
 	end,
@@ -1640,10 +1647,10 @@ cmd("ask", {
 		local player = core.get_player_by_name(name)
 		local live = player and region_near(player:get_pos())
 		say(name, "You asked: " .. param, "#A0A0A0")
-		Tutor.send(http, api_key, Tutor.ask_body(param, progress(name).tier, live and live.area.name),
+		Tutor.send(http, tutor_cfg, Tutor.ask_request(tutor_cfg, param, progress(name).tier, live and live.area.name),
 			core.write_json, core.parse_json, function(text, err)
 				Tutor.finish(tutor_limits, name)
-				say(name, core.colorize("#D080FF", "Tutor: ") .. (text or err))
+				say(name, core.colorize("#D080FF", "Tutor: ") .. (text and Tutor.strip_label(text) or err))
 			end)
 		return true
 	end,
