@@ -297,7 +297,7 @@ including free open-source models on your own computer.
 **Setup** (Luanti **Settings**, show advanced settings):
 
 1. Set **Mods → HTTP mods** (`secure.http_mods`) to `crystalminer`.
-2. Choose **crystalminer → Tutor: provider**:
+2. Under **Content: Games → crystalminer**, choose **Tutor: provider**:
    - `anthropic` (default): set **Tutor: Anthropic API key**, or the environment variable
      `ANTHROPIC_API_KEY`. The Claude API is charged per request.
    - `openai_compatible`: set **Tutor: model name** and, if needed, **Tutor: base URL** (default
@@ -364,6 +364,7 @@ GitHub Actions runs the unit tests and the self-test on Ubuntu 22.04 (Minetest 5
 
 ```
 game.conf                     Luanti game definition
+settingtypes.txt              the game's settings (shown in Luanti's main menu)
 mods/crystalminer/
   init.lua                    blocks, world, events, quizzes, progress board, commands
   symmetry.lua                engine: operations, groups, 32 point groups, 17 plane groups, regions, detection
@@ -383,10 +384,9 @@ mods/crystalminer/
   stereo.lua                  the stereogram (International Tables style)
   tour.lua                    the visitor tour
   elements.lua                where to draw axes, mirror planes and centres
-  tutor.lua                   Claude API requests (raw HTTP)
+  tutor.lua                   AI tutor requests (Claude or OpenAI-compatible, raw HTTP)
   content.lua                 all text players read; edit without touching code
   selftest.lua                in-server checks
-  settingtypes.txt            the game's settings
   sounds/                     Ogg sound effects
   textures/                   generated textures, glyphs and figures
 tests/                        unit tests and test runners
@@ -400,9 +400,10 @@ tools/                        generators (see below)
 
 ### Settings
 
-All are in [mods/crystalminer/settingtypes.txt](mods/crystalminer/settingtypes.txt):
-`crystalminer.anthropic_api_key`, `crystalminer.selftest` (default off), `crystalminer.pretest`,
-`crystalminer.always_day` and `crystalminer.sounds` (all three on by default).
+All are in [settingtypes.txt](settingtypes.txt) at the top of the game, so Luanti's main menu shows
+them under **Settings → Content: Games → crystalminer**: the tutor settings,
+`crystalminer.selftest` (default off), `crystalminer.pretest`, `crystalminer.always_day` and
+`crystalminer.sounds` (all three on by default).
 
 ## Credits and acknowledgements
 
