@@ -399,6 +399,9 @@ All are in [mods/crystalminer/settingtypes.txt](mods/crystalminer/settingtypes.t
 - International Tables for Crystallography, Vol. A, for point-group orders, plane-group
   multiplicities and symbols.
 - [DejaVu fonts](https://dejavu-fonts.github.io/) for the lettering on signs and in figures.
+- [Anthropic](https://www.anthropic.com)'s Claude models. Much of the code, texts, figures and
+  tests were written with Claude Opus 5.5 and Claude Sonnet 5.5 through Claude Code, under the
+  author's direction and review. The in-game tutor calls Claude Opus 5.5 through the Claude API.
 
 ## Licence
 
