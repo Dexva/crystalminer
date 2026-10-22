@@ -29,6 +29,7 @@ the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hacka
 
 ## Contents
 
+- [Motivation](#motivation)
 - [Features](#features)
 - [Quick start](#quick-start)
 - [How to play](#how-to-play)
@@ -37,6 +38,31 @@ the reviewed lesson text. Built for the Open Scientific Intelligence (OSI) Hacka
 - [Development](#development)
 - [Credits and acknowledgements](#credits-and-acknowledgements)
 - [Licence](#licence)
+
+## Motivation
+
+Symmetry is the language of crystallography, but it is hard to picture. Chemistry teachers report
+that students cope with the symmetry of single molecules but find space groups hard to imagine,
+especially the symmetries that include a translation, such as screw axes and glide planes. They
+also point to evidence that tangible 3D objects teach better than the 2D diagrams of textbooks
+([Graw & Stalke, 2022](https://doi.org/10.1107/S1600576721012218)). crystalminer is built around
+those two observations:
+
+- **Build it, don't just look at it.** Students do not read about a mirror or a screw axis; they
+  build next to one and watch it copy their blocks. They predict before they see, place copies by
+  hand, and move between the 3D world and the 2D stereogram of textbooks.
+- **A block world is already a lattice.** Every block sits on a cubic grid, as atoms sit on a
+  crystal lattice. The grid's limits become lessons too: only 25 of the 32 crystallographic point
+  groups fit it, and the Impossible Room shows why a six-fold axis cannot be built from cubes.
+- **Free for every classroom.** The game runs on [Luanti](https://www.luanti.org), which is free
+  and open source and runs on Windows, macOS, Linux and Android. An earlier prototype used
+  Minecraft Java Edition; on Luanti the game itself costs nothing to install or play.
+- **Accurate before anything else.** Automated tests check the numbers and symmetries the game
+  states against its symmetry engine. The Claude tutor answers only from the reviewed lesson
+  text, and when it names a symmetry, the game's own symmetry engine checks it.
+- **Standing on MolCraft.** MolCraft (University of Hull) showed that a block game can carry real
+  chemistry. Its central hall of teleporters, giant models and hidden quiz chests inspired
+  crystalminer's museum, portal hall and clue crystals.
 
 ## Features
 
